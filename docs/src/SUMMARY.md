@@ -2,15 +2,20 @@
 
 [Introduction](./introduction.md)
 
+# Usage
+
+- [Command Line Interface](./cli.md)
+
 # Language Guide
 
 - [Expressions](./expressions.md)
+- [Strings](./strings.md)
 - [Labels](./labels.md)
 
 - [Simple Directives](./simple_directives.md)
-  - [@echo](./echo.md)
-  - [@org](./org.md)
-  - [@assert](./assert.md)
+  - [`@echo`](./echo.md)
+  - [`@assert`](./assert.md)
+  - [`@org`](./org.md)
   - [@die](./die.md)
   - [@here](./here.md)
   - [@def](./def.md)
