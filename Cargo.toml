@@ -1,0 +1,10 @@
+[package]
+name = "az65"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "3", features = ["derive"] }
+thiserror = "1"
+path-absolutize = "3"
+fxhash = "0.2"
