@@ -6,6 +6,8 @@ and demonstrating future directives.
 The `@echo` directive takes a single string or expression argument and prints it
 to `stderr`.
 
+## Examples
+
 ```
 @echo "Hello World"
 ```

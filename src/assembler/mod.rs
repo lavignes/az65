@@ -1843,7 +1843,7 @@ where
                             }
                         }
 
-                        DirectiveName::Def => {
+                        DirectiveName::Defl => {
                             self.next()?;
 
                             let (direct, loc) = match self.peek()? {
@@ -1867,12 +1867,12 @@ where
                                         } else {
                                             let interner = self.str_interner.as_ref().borrow();
                                             let label = interner.get(value).unwrap();
-                                            return asm_err!(loc, "The local symbol \"{label}\" is being defined but there was no global label defined before it");
+                                            return asm_err!(loc, "The local label \"{label}\" is being defined but there was no global label defined before it");
                                         }
                                     }
                                 },
                                 Some(tok) => {
-                                    return asm_err!(tok.loc(), "A symbol name is required")
+                                    return asm_err!(tok.loc(), "A label name is required")
                                 }
                             };
                             self.next()?;
@@ -1880,7 +1880,7 @@ where
                             if self.symtab.get(direct).is_some() {
                                 let interner = self.str_interner.as_ref().borrow();
                                 let label = interner.get(direct).unwrap();
-                                return asm_err!(loc, "The symbol \"{label}\" was already defined");
+                                return asm_err!(loc, "The label \"{label}\" was already defined");
                             }
 
                             self.expect_symbol(SymbolName::Comma)?;
@@ -1888,7 +1888,52 @@ where
                             self.symtab.insert(direct, Symbol::Expr(expr));
                         }
 
-                        DirectiveName::ReDef => {
+                        DirectiveName::Defn => {
+                            self.next()?;
+
+                            let (direct, loc) = match self.peek()? {
+                                None => return self.end_of_input_err(),
+
+                                Some(&Token::Label { loc, value, kind }) => match kind {
+                                    LabelKind::Global | LabelKind::Direct => (value, loc),
+
+                                    LabelKind::Local => {
+                                        if let Some(namespace) = self.active_namespace {
+                                            let global_label = {
+                                                let interner = self.str_interner.as_ref().borrow();
+                                                let global = interner.get(namespace).unwrap();
+                                                let label = interner.get(value).unwrap();
+                                                format!("{global}{label}")
+                                            };
+                                            (
+                                                self.str_interner.borrow_mut().intern(global_label),
+                                                loc,
+                                            )
+                                        } else {
+                                            let interner = self.str_interner.as_ref().borrow();
+                                            let label = interner.get(value).unwrap();
+                                            return asm_err!(loc, "The local constant \"{label}\" is being defined but there was no global label defined before it");
+                                        }
+                                    }
+                                },
+                                Some(tok) => {
+                                    return asm_err!(tok.loc(), "A constant name is required")
+                                }
+                            };
+                            self.next()?;
+
+                            if self.symtab.get(direct).is_some() {
+                                let interner = self.str_interner.as_ref().borrow();
+                                let label = interner.get(direct).unwrap();
+                                return asm_err!(loc, "The constant \"{label}\" was already defined");
+                            }
+
+                            self.expect_symbol(SymbolName::Comma)?;
+                            let (_, expr) = self.expr()?;
+                            self.symtab.insert_no_meta(direct, Symbol::Expr(expr));
+                        }
+
+                        DirectiveName::ReDefl => {
                             self.next()?;
 
                             let direct = match self.next()? {
@@ -1909,7 +1954,7 @@ where
                                         } else {
                                             let interner = self.str_interner.as_ref().borrow();
                                             let label = interner.get(value).unwrap();
-                                            return asm_err!(loc, "The local symbol \"{label}\" is being defined but there was no global label defined before it");
+                                            return asm_err!(loc, "The local label \"{label}\" is being defined but there was no global label defined before it");
                                         }
                                     }
                                 },
@@ -1926,6 +1971,46 @@ where
                             self.expect_symbol(SymbolName::Comma)?;
                             let (_, expr) = self.expr()?;
                             self.symtab.insert(direct, Symbol::Expr(expr));
+                        }
+
+                        DirectiveName::ReDefn => {
+                            self.next()?;
+
+                            let direct = match self.next()? {
+                                None => return self.end_of_input_err(),
+
+                                Some(Token::Label { loc, value, kind }) => match kind {
+                                    LabelKind::Global | LabelKind::Direct => value,
+
+                                    LabelKind::Local => {
+                                        if let Some(namespace) = self.active_namespace {
+                                            let global_label = {
+                                                let interner = self.str_interner.as_ref().borrow();
+                                                let global = interner.get(namespace).unwrap();
+                                                let label = interner.get(value).unwrap();
+                                                format!("{global}{label}")
+                                            };
+                                            self.str_interner.borrow_mut().intern(global_label)
+                                        } else {
+                                            let interner = self.str_interner.as_ref().borrow();
+                                            let label = interner.get(value).unwrap();
+                                            return asm_err!(loc, "The local constant \"{label}\" is being defined but there was no global label defined before it");
+                                        }
+                                    }
+                                },
+
+                                Some(tok) => {
+                                    return asm_err!(
+                                        tok.loc(),
+                                        "Unexpected {}, expected a label",
+                                        tok.as_display(&self.str_interner)
+                                    )
+                                }
+                            };
+
+                            self.expect_symbol(SymbolName::Comma)?;
+                            let (_, expr) = self.expr()?;
+                            self.symtab.insert_no_meta(direct, Symbol::Expr(expr));
                         }
 
                         DirectiveName::UnDef => {
@@ -2443,7 +2528,7 @@ where
                                                 }
                                                 (_, Some(field_size)) => {
                                                     self.symtab
-                                                        .insert(direct, Symbol::Value(struct_size));
+                                                        .insert_no_meta(direct, Symbol::Value(struct_size));
                                                     struct_size =
                                                         struct_size.wrapping_add(field_size);
                                                 }
@@ -2460,7 +2545,7 @@ where
                                 }
                             }
                             self.active_namespace = old_namespace;
-                            self.symtab.insert(value, Symbol::Value(struct_size));
+                            self.symtab.insert_no_meta(value, Symbol::Value(struct_size));
                         }
 
                         DirectiveName::Align => {

@@ -74,6 +74,17 @@ impl Symtab {
     }
 
     #[inline]
+    pub fn insert_no_meta(&mut self, key: StrRef, value: Symbol) -> Option<MetaSymbol> {
+        self.inner.insert(
+            key,
+            MetaSymbol {
+                inner: value,
+                meta: self.meta_interner.intern(&[]),
+            },
+        )
+    }
+
+    #[inline]
     pub fn touch(&mut self, key: StrRef, loc: SourceLoc) {
         if !self.hits.contains_key(&key) {
             self.hits.insert(key, loc);

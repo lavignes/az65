@@ -195,8 +195,10 @@ pub enum DirectiveName {
     Here,
     Macro,
     EndMacro,
-    Def,
-    ReDef,
+    Defl,
+    Defn,
+    ReDefl,
+    ReDefn,
     IsDef,
     UnDef,
     Echo,
@@ -230,8 +232,10 @@ impl DirectiveName {
             "@here" | "@HERE" => Some(Self::Here),
             "@macro" | "@MACRO" => Some(Self::Macro),
             "@endmacro" | "@ENDMACRO" => Some(Self::EndMacro),
-            "@def" | "@DEF" => Some(Self::Def),
-            "@redef" | "@REDEF" => Some(Self::ReDef),
+            "@defl" | "@DEFl" => Some(Self::Defl),
+            "@defn" | "@DEFN" => Some(Self::Defn),
+            "@redefl" | "@REDEFl" => Some(Self::ReDefl),
+            "@redefn" | "@REDEFN" => Some(Self::ReDefn),
             "@isdef" | "@ISDEF" => Some(Self::IsDef),
             "@undef" | "@UNDEF" => Some(Self::UnDef),
             "@echo" | "@ECHO" => Some(Self::Echo),
@@ -271,8 +275,10 @@ impl Display for DirectiveName {
                 Self::Here => "@here",
                 Self::Macro => "@macro",
                 Self::EndMacro => "@endmacro",
-                Self::Def => "@def",
-                Self::ReDef => "@redef",
+                Self::Defl => "@defl",
+                Self::Defn => "@defn",
+                Self::ReDefl => "@redefl",
+                Self::ReDefn => "@redefn",
                 Self::IsDef => "@isdef",
                 Self::UnDef => "@undef",
                 Self::Echo => "@echo",
@@ -1225,6 +1231,7 @@ mod tests {
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), Some(Ok(Token::Comment { .. }))));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
 
@@ -1240,6 +1247,7 @@ mod tests {
             lexer.next(),
             Some(Ok(Token::String { value, .. })) if value == string
         ));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
@@ -1257,6 +1265,7 @@ mod tests {
             Some(Ok(Token::String { value, .. })) if value == string
         ));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
 
@@ -1272,6 +1281,7 @@ mod tests {
             lexer.next(),
             Some(Ok(Token::String { value, .. })) if value == string
         ));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
@@ -1291,6 +1301,7 @@ mod tests {
             })) if value == ('q' as u32)
         ));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
 
@@ -1306,6 +1317,7 @@ mod tests {
             Some(Ok(Token::Number { value, .. })) if value == ('\n' as u32)
         ));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
 
@@ -1320,6 +1332,7 @@ mod tests {
             lexer.next(),
             Some(Ok(Token::Number { value, .. })) if value == ('\x7f' as u32)
         ));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
@@ -1339,6 +1352,7 @@ mod tests {
             }))
         ));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
 
@@ -1353,6 +1367,7 @@ mod tests {
             lexer.next(),
             Some(Ok(Token::Number { value: 123456, .. }))
         ));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
@@ -1371,6 +1386,7 @@ mod tests {
                 ..
             }))
         ));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
@@ -1586,6 +1602,7 @@ mod tests {
             }))
         ));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
 
@@ -1617,6 +1634,7 @@ mod tests {
                 ..
             }))
         ));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }
@@ -1659,6 +1677,7 @@ mod tests {
                 ..
             })) if value == label
         ));
+        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
     }

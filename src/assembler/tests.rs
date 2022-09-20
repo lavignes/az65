@@ -1926,7 +1926,7 @@ fn stringify_and_labelify() {
             
             @label "test"
             
-            @def @label { global "." @string { the "_" local } }, 42
+            @defl @label { global "." @string { the "_" local } }, 42
             @assert global.the_local == 42
         "#,
     )]);
@@ -1977,9 +1977,9 @@ fn each() {
                 @@endeach
             @endmacro
             
-            @def First, $1234
-            @def Second, $5678
-            @def Third, $9abc
+            @defl First, $1234
+            @defl Second, $5678
+            @defl Third, $9abc
 
             MAKE_TABLE MyTable, {
                 First
@@ -2013,7 +2013,7 @@ fn control_flow() {
         "/test.asm",
         r#"
            @each { @count !@isdef STDMACROS_INC }
-               @@def STDMACROS_INC, 0
+               @@defn STDMACROS_INC, 0
                
                @@macro REPEAT, 2
                    @@@each { @@@count (@@1) }
@@ -2038,7 +2038,7 @@ fn control_flow() {
                
                @@macro ONCE, 2
                    @@@each { @@@count !@@@isdef @@1 }
-                       @@@def @@1, 0
+                       @@@defn @@1, 0
                        @@2
                    @@@endeach
                @@endmacro
@@ -2053,7 +2053,7 @@ fn control_flow() {
            }
            
            @assert !@isdef Test
-           @def Test, 2
+           @defn Test, 2
            @assert @isdef Test
            
            IF_ELSE { !@isdef Test }, {

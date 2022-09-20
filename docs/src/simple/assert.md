@@ -3,6 +3,8 @@
 The `@assert` directive is also invaluable for debugging and validating
 invariants in your code.
 
+## Examples
+
 It is invoked with an expression argument and optional string message:
 
 ```
@@ -24,5 +26,5 @@ SubRoutine:
     nop
     nop
     rts
-    @def .length, @here - SubRoutine
+    @defn .length, @here - SubRoutine
 ```
