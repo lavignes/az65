@@ -693,8 +693,7 @@ where
 
     fn expect_branch_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
         let (loc, mut expr) = self.expr()?;
-        // Make the expression relative to @here
-        expr.push(ExprNode::Value(self.here as i32));
+        expr.push(ExprNode::Value(self.here.wrapping_add(2) as i32)); // subtract where the PC will be
         expr.push(ExprNode::Sub);
         if let Some(value) = expr.evaluate(&self.symtab) {
             if (value < (i8::MIN as i32)) || (value > (i8::MAX as i32)) {
@@ -2658,9 +2657,9 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     self.data.push(0x69);
                                     self.expect_immediate()?;
+                                    self.here += 2;
                                 }
 
                                 Some(Token::Symbol {
@@ -2668,7 +2667,6 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     let (loc, expr) = self.expr()?;
                                     let value = if let Some(value) = expr.evaluate(&self.symtab) {
                                         if (value as u32) > (u8::MAX as u32) {
@@ -2710,6 +2708,7 @@ where
                                         }
                                     }
                                     self.data.push(value);
+                                    self.here += 2;
                                 }
 
                                 Some(_) => {
@@ -2786,9 +2785,9 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     self.data.push(0x29);
                                     self.expect_immediate()?;
+                                    self.here += 2;
                                 }
 
                                 Some(Token::Symbol {
@@ -2796,7 +2795,6 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     let (loc, expr) = self.expr()?;
                                     let value = if let Some(value) = expr.evaluate(&self.symtab) {
                                         if (value as u32) > (u8::MAX as u32) {
@@ -2837,6 +2835,7 @@ where
                                             );
                                         }
                                     }
+                                    self.here += 2;
                                     self.data.push(value);
                                 }
 
@@ -2961,23 +2960,23 @@ where
 
                         OperationName::Bcc => {
                             self.next()?;
-                            self.here += 2;
                             self.data.push(0x90);
                             self.expect_branch_immediate()?;
+                            self.here += 2;
                         }
 
                         OperationName::Bcs => {
                             self.next()?;
-                            self.here += 2;
                             self.data.push(0xB0);
                             self.expect_branch_immediate()?;
+                            self.here += 2;
                         }
 
                         OperationName::Beq => {
                             self.next()?;
-                            self.here += 2;
                             self.data.push(0xF0);
                             self.expect_branch_immediate()?;
+                            self.here += 2;
                         }
 
                         OperationName::Bit => {
@@ -3016,23 +3015,23 @@ where
 
                         OperationName::Bmi => {
                             self.next()?;
-                            self.here += 2;
                             self.data.push(0x30);
                             self.expect_branch_immediate()?;
+                            self.here += 2;
                         }
 
                         OperationName::Bne => {
                             self.next()?;
-                            self.here += 2;
                             self.data.push(0xD0);
                             self.expect_branch_immediate()?;
+                            self.here += 2;
                         }
 
                         OperationName::Bpl => {
                             self.next()?;
-                            self.here += 2;
                             self.data.push(0x10);
                             self.expect_branch_immediate()?;
+                            self.here += 2;
                         }
 
                         OperationName::Brk => {
@@ -3043,16 +3042,16 @@ where
 
                         OperationName::Bvc => {
                             self.next()?;
-                            self.here += 2;
                             self.data.push(0x50);
                             self.expect_branch_immediate()?;
+                            self.here += 2;
                         }
 
                         OperationName::Bvs => {
                             self.next()?;
-                            self.here += 2;
                             self.data.push(0x70);
                             self.expect_branch_immediate()?;
+                            self.here += 2;
                         }
 
                         OperationName::Clc => {
@@ -3089,9 +3088,9 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     self.data.push(0xC9);
                                     self.expect_immediate()?;
+                                    self.here += 2;
                                 }
 
                                 Some(Token::Symbol {
@@ -3099,7 +3098,6 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     let (loc, expr) = self.expr()?;
                                     let value = if let Some(value) = expr.evaluate(&self.symtab) {
                                         if (value as u32) > (u8::MAX as u32) {
@@ -3140,6 +3138,7 @@ where
                                             );
                                         }
                                     }
+                                    self.here += 2;
                                     self.data.push(value);
                                 }
 
@@ -3217,9 +3216,9 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     self.data.push(0xE0);
                                     self.expect_immediate()?;
+                                    self.here += 2;
                                 }
 
                                 Some(_) => {
@@ -3261,9 +3260,9 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     self.data.push(0xC0);
                                     self.expect_immediate()?;
+                                    self.here += 2;
                                 }
 
                                 Some(_) => {
@@ -3363,9 +3362,9 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     self.data.push(0x49);
                                     self.expect_immediate()?;
+                                    self.here += 2;
                                 }
 
                                 Some(Token::Symbol {
@@ -3373,7 +3372,6 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     let (loc, expr) = self.expr()?;
                                     let value = if let Some(value) = expr.evaluate(&self.symtab) {
                                         if (value as u32) > (u8::MAX as u32) {
@@ -3414,6 +3412,7 @@ where
                                             );
                                         }
                                     }
+                                    self.here += 2;
                                     self.data.push(value);
                                 }
 
@@ -3541,7 +3540,6 @@ where
 
                         OperationName::Jmp => {
                             self.next()?;
-                            self.here += 3;
 
                             let need_paren = if self.peeked_symbol(SymbolName::ParenOpen)?.is_some()
                             {
@@ -3568,6 +3566,7 @@ where
                                 self.data.push(0);
                             };
 
+                            self.here += 3;
                             if need_paren {
                                 self.expect_symbol(SymbolName::ParenClose)?;
                             }
@@ -3575,7 +3574,6 @@ where
 
                         OperationName::Jsr => {
                             self.next()?;
-                            self.here += 3;
                             self.data.push(0x20);
                             let (loc, expr) = self.expr()?;
                             if let Some(value) = expr.evaluate(&self.symtab) {
@@ -3591,6 +3589,7 @@ where
                                 self.data.push(0);
                                 self.data.push(0);
                             };
+                            self.here += 3;
                         }
 
                         OperationName::Lda => {
@@ -3603,9 +3602,9 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     self.data.push(0xA9);
                                     self.expect_immediate()?;
+                                    self.here += 2;
                                 }
 
                                 Some(Token::Symbol {
@@ -3613,7 +3612,6 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     let (loc, expr) = self.expr()?;
                                     let value = if let Some(value) = expr.evaluate(&self.symtab) {
                                         if (value as u32) > (u8::MAX as u32) {
@@ -3654,6 +3652,7 @@ where
                                             );
                                         }
                                     }
+                                    self.here += 2;
                                     self.data.push(value);
                                 }
 
@@ -3731,9 +3730,9 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     self.data.push(0xA2);
                                     self.expect_immediate()?;
+                                    self.here += 2;
                                 }
 
                                 Some(_) => {
@@ -3787,9 +3786,9 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     self.data.push(0xA0);
                                     self.expect_immediate()?;
+                                    self.here += 2;
                                 }
 
                                 Some(_) => {
@@ -3904,9 +3903,9 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     self.data.push(0x09);
                                     self.expect_immediate()?;
+                                    self.here += 2;
                                 }
 
                                 Some(Token::Symbol {
@@ -3914,7 +3913,6 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     let (loc, expr) = self.expr()?;
                                     let value = if let Some(value) = expr.evaluate(&self.symtab) {
                                         if (value as u32) > (u8::MAX as u32) {
@@ -3955,6 +3953,7 @@ where
                                             );
                                         }
                                     }
+                                    self.here += 2;
                                     self.data.push(value);
                                 }
 
@@ -4178,9 +4177,9 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     self.data.push(0xE9);
                                     self.expect_immediate()?;
+                                    self.here += 2;
                                 }
 
                                 Some(Token::Symbol {
@@ -4188,7 +4187,6 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     let (loc, expr) = self.expr()?;
                                     let value = if let Some(value) = expr.evaluate(&self.symtab) {
                                         if (value as u32) > (u8::MAX as u32) {
@@ -4229,6 +4227,7 @@ where
                                             );
                                         }
                                     }
+                                    self.here += 2;
                                     self.data.push(value);
                                 }
 
@@ -4324,7 +4323,6 @@ where
                                     ..
                                 }) => {
                                     self.next()?;
-                                    self.here += 2;
                                     let (loc, expr) = self.expr()?;
                                     let value = if let Some(value) = expr.evaluate(&self.symtab) {
                                         if (value as u32) > (u8::MAX as u32) {
@@ -4365,6 +4363,7 @@ where
                                             );
                                         }
                                     }
+                                    self.here += 2;
                                     self.data.push(value);
                                 }
 
