@@ -718,6 +718,21 @@ where
         Ok(())
     }
 
+    pub(crate) fn expect_wide_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
+        let (loc, expr) = self.expr()?;
+        if let Some(value) = expr.evaluate(&self.symtab) {
+            if (value as u32) > (u16::MAX as u32) {
+                return asm_err!(loc, "Expression result ({value}) will not fit in a word");
+            }
+            self.data.extend_from_slice(&(value as u16).to_le_bytes());
+        } else {
+            self.links.push(Link::word(loc, self.data.len(), expr));
+            self.data.push(0);
+            self.data.push(0);
+        }
+        Ok(())
+    }
+
     pub(crate) fn expect_branch_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
         let (loc, mut expr) = self.expr()?;
         expr.push(ExprNode::Value(self.here.wrapping_add(2) as i32)); // subtract where the PC will be

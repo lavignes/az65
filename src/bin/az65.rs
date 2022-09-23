@@ -8,7 +8,7 @@ use std::{
 
 use az65::{
     assembler::Assembler, fileman::RealFileSystem, linker::DebugExporter, mos6502::Mos6502,
-    namelist::NameList, z80::Z80,
+    namelist::NameList, sm83::Sm83, z80::Z80,
 };
 use clap::{Parser, Subcommand};
 
@@ -54,6 +54,12 @@ enum Arch {
     },
 
     Z80 {
+        /// Path to input assembly file
+        #[clap(parse(from_os_str), value_name = "FILE")]
+        file: PathBuf,
+    },
+
+    Sm83 {
         /// Path to input assembly file
         #[clap(parse(from_os_str), value_name = "FILE")]
         file: PathBuf,
@@ -105,6 +111,22 @@ fn main() -> ExitCode {
         }
         Arch::Z80 { file } => {
             let mut assembler = Assembler::new(file_system, Z80);
+            for path in &args.include {
+                if let Err(e) = assembler.add_search_path(full_cwd.as_path(), path) {
+                    eprintln!("[ERROR]: {e}");
+                    return ExitCode::FAILURE;
+                }
+            }
+            match assembler.assemble(full_cwd.as_path(), file) {
+                Ok(module) => module,
+                Err(e) => {
+                    eprintln!("[ERROR]: {e}");
+                    return ExitCode::FAILURE;
+                }
+            }
+        }
+        Arch::Sm83 { file } => {
+            let mut assembler = Assembler::new(file_system, Sm83);
             for path in &args.include {
                 if let Err(e) = assembler.add_search_path(full_cwd.as_path(), path) {
                     eprintln!("[ERROR]: {e}");

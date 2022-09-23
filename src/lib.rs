@@ -7,5 +7,6 @@ pub mod lexer;
 pub mod linker;
 pub mod mos6502;
 pub mod namelist;
+pub mod sm83;
 pub mod symtab;
 pub mod z80;
