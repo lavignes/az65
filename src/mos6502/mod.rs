@@ -1,13 +1,13 @@
+use std::{
+    fmt::{self, Display, Formatter},
+    io::Read,
+};
+
 use crate::{
     assembler::{ArchAssembler, Assembler, AssemblerError},
     fileman::FileSystem,
     lexer::{self, ArchTokens, FlagName, SourceLoc, SymbolName, Token},
     linker::Link,
-};
-
-use std::{
-    fmt::{self, Display, Formatter},
-    io::Read,
 };
 
 #[cfg(test)]

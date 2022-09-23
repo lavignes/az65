@@ -6,13 +6,13 @@ use std::{
     process::ExitCode,
 };
 
-use az65::mos6502::Mos6502;
 use az65::{
-    assembler::Assembler, fileman::RealFileSystem, linker::DebugExporter, namelist::NameList,
+    assembler::Assembler, fileman::RealFileSystem, linker::DebugExporter, mos6502::Mos6502,
+    namelist::NameList,
 };
 use clap::Parser;
 
-#[derive(clap::Parser, Debug)]
+#[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
     /// Path to input assembly file

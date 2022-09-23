@@ -3,10 +3,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use super::*;
-
-use crate::{assembler::Assembler, fileman::FileSystem};
 use fxhash::FxHashMap;
+
+use super::*;
+use crate::{assembler::Assembler, fileman::FileSystem};
 
 struct StringFileSystem {
     files: FxHashMap<PathBuf, String>,

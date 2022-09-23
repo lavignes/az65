@@ -1,6 +1,6 @@
-use std::fmt::{Display, Formatter};
 use std::{
     fmt,
+    fmt::{Display, Formatter},
     io::{self, Cursor},
     path::{Path, PathBuf},
 };
@@ -8,8 +8,10 @@ use std::{
 use fxhash::FxHashMap;
 
 use super::*;
-use crate::fileman::FileSystem;
-use crate::lexer::{FlagName, OperationName, RegisterName};
+use crate::{
+    fileman::FileSystem,
+    lexer::{FlagName, OperationName, RegisterName},
+};
 
 struct StringFileSystem {
     files: FxHashMap<PathBuf, String>,

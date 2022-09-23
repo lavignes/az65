@@ -1,9 +1,8 @@
-use std::fmt::Debug;
-use std::marker::PhantomData;
 use std::{
     cell::{Ref, RefCell, RefMut},
-    fmt::{self, Display, Formatter},
+    fmt::{self, Debug, Display, Formatter},
     io::Read,
+    marker::PhantomData,
     rc::Rc,
 };
 
