@@ -359,7 +359,147 @@ where
                         name: RegisterName::A,
                         ..
                     }) => {
-                        todo!()
+                        asm.expect_symbol(SymbolName::Comma)?;
+                        match asm.peek()? {
+                            None => return asm.end_of_input_err(),
+
+                            Some(Token::Register {
+                                name: RegisterName::A,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x7F);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::B,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x78);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::C,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x79);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::D,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x7A);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::E,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x7B);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::H,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x7C);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::L,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x7D);
+                            }
+
+                            Some(Token::Symbol {
+                                name: SymbolName::ParenOpen,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                match asm.peek()? {
+                                    None => return asm.end_of_input_err(),
+
+                                    Some(Token::Register {
+                                        name: RegisterName::BC,
+                                        ..
+                                    }) => {
+                                        asm.next()?;
+                                        asm.expect_symbol(SymbolName::ParenClose)?;
+                                        asm.data.push(0x0A);
+                                    }
+
+                                    Some(Token::Register {
+                                        name: RegisterName::DE,
+                                        ..
+                                    }) => {
+                                        asm.next()?;
+                                        asm.expect_symbol(SymbolName::ParenClose)?;
+                                        asm.data.push(0x1A);
+                                    }
+
+                                    Some(Token::Register {
+                                        name: RegisterName::C,
+                                        ..
+                                    }) => {
+                                        asm.next()?;
+                                        asm.expect_symbol(SymbolName::ParenClose)?;
+                                        asm.data.push(0xF2);
+                                    }
+
+                                    Some(Token::Register {
+                                        name: RegisterName::HL,
+                                        ..
+                                    }) => {
+                                        asm.next()?;
+                                        match asm.peek()? {
+                                            None => return asm.end_of_input_err(),
+
+                                            Some(Token::Symbol {
+                                                name: SymbolName::Plus,
+                                                ..
+                                            }) => {
+                                                asm.next()?;
+                                                asm.expect_symbol(SymbolName::ParenClose)?;
+                                                asm.data.push(0x2A);
+                                            }
+
+                                            Some(Token::Symbol {
+                                                name: SymbolName::Minus,
+                                                ..
+                                            }) => {
+                                                asm.next()?;
+                                                asm.expect_symbol(SymbolName::ParenClose)?;
+                                                asm.data.push(0x3A);
+                                            }
+
+                                            Some(_) => {
+                                                asm.expect_symbol(SymbolName::ParenClose)?;
+                                                asm.data.push(0x7E);
+                                            }
+                                        }
+                                    }
+
+                                    Some(_) => {
+                                        asm.data.push(0xFA);
+                                        asm.expect_wide_immediate()?;
+                                        asm.expect_symbol(SymbolName::ParenClose)?;
+                                    }
+                                }
+                            }
+
+                            Some(_) => {
+                                asm.data.push(0x3E);
+                                asm.expect_immediate()?;
+                            }
+                        }
                     }
 
                     Some(Token::Symbol {

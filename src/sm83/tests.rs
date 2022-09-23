@@ -253,3 +253,55 @@ fn ld_c() {
         1, 0x00
     ], data);
 }
+
+#[test]
+fn ld_a() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            ld a, a
+            ld a, b
+            ld a, c
+            ld a, d
+            ld a, e
+            ld a, h
+            ld a, l
+            ld a, (bc)
+            ld a, (de)
+            ld a, (c)
+            ld a, (hl+)
+            ld a, (hl-)
+            ld a, (hl)
+            ld a, ($1234)
+            ld a, $42
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0x7F,
+        0x78,
+        0x79,
+        0x7A,
+        0x7B,
+        0x7C,
+        0x7D,
+        0x0A,
+        0x1A,
+        0xF2,
+        0x2A,
+        0x3A,
+        0x7E,
+        0xFA, 0x34, 0x12,
+        0x3E, 0x42,
+        18, 0x00
+    ], data);
+}
