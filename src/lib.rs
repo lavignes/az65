@@ -8,3 +8,4 @@ pub mod linker;
 pub mod mos6502;
 pub mod namelist;
 pub mod symtab;
+pub mod z80;

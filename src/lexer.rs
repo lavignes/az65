@@ -1,5 +1,5 @@
 use std::{
-    cell::{Ref, RefCell, RefMut},
+    cell::RefCell,
     fmt::{self, Debug, Display, Formatter},
     io::Read,
     marker::PhantomData,
@@ -545,13 +545,9 @@ impl<R: Read, A> Lexer<R, A> {
         self.included_from
     }
 
+    #[cfg(test)]
     #[inline]
-    fn str_interner(&self) -> Ref<StrInterner> {
-        self.str_interner.as_ref().borrow()
-    }
-
-    #[inline]
-    fn str_interner_mut(&self) -> RefMut<StrInterner> {
+    fn str_interner_mut(&self) -> std::cell::RefMut<StrInterner> {
         self.str_interner.borrow_mut()
     }
 
@@ -1198,6 +1194,19 @@ impl<R: Read, A: ArchTokens> Iterator for Lexer<R, A> {
                         }
 
                         if let Some(name) = A::RegisterName::parse(&self.buffer) {
+                            // FIXME: hack for z80 af' register
+                            if c == '\'' {
+                                self.buffer.push(c);
+                                if let Some(name) = A::RegisterName::parse(&self.buffer) {
+                                    self.stash = None;
+                                    return Some(Ok(Token::Register {
+                                        loc: self.tok_loc,
+                                        name,
+                                    }));
+                                }
+                                self.buffer.pop();
+                            }
+
                             return Some(Ok(Token::Register {
                                 loc: self.tok_loc,
                                 name,

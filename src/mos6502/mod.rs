@@ -290,7 +290,6 @@ where
                         asm.next()?;
                         asm.data.push(0x69);
                         asm.expect_immediate()?;
-                        asm.here += 2;
                     }
 
                     Some(Token::Symbol {
@@ -342,14 +341,12 @@ where
                             }
                         }
                         asm.data.push(value);
-                        asm.here += 2;
                     }
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -373,7 +370,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             match asm.next()? {
@@ -421,7 +417,6 @@ where
                         asm.next()?;
                         asm.data.push(0x29);
                         asm.expect_immediate()?;
-                        asm.here += 2;
                     }
 
                     Some(Token::Symbol {
@@ -472,7 +467,6 @@ where
                                 );
                             }
                         }
-                        asm.here += 2;
                         asm.data.push(value);
                     }
 
@@ -480,7 +474,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -504,7 +497,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             match asm.next()? {
@@ -550,7 +542,6 @@ where
                         ..
                     }) => {
                         asm.next()?;
-                        asm.here += 1;
                         asm.data.push(0x0A);
                     }
 
@@ -558,7 +549,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -582,7 +572,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             asm.expect_register(RegisterName::X)?;
@@ -599,21 +588,18 @@ where
                 asm.next()?;
                 asm.data.push(0x90);
                 asm.expect_branch_immediate()?;
-                asm.here += 2;
             }
 
             OperationName::Bcs => {
                 asm.next()?;
                 asm.data.push(0xB0);
                 asm.expect_branch_immediate()?;
-                asm.here += 2;
             }
 
             OperationName::Beq => {
                 asm.next()?;
                 asm.data.push(0xF0);
                 asm.expect_branch_immediate()?;
-                asm.here += 2;
             }
 
             OperationName::Bit => {
@@ -625,7 +611,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 asm.data.push(0x24);
                                 asm.data.push(value as u8);
                                 return Ok(());
@@ -643,7 +628,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         asm.data.push(0x2C);
                         asm.data.extend_from_slice(&(value as u16).to_le_bytes());
                     }
@@ -654,26 +638,22 @@ where
                 asm.next()?;
                 asm.data.push(0x30);
                 asm.expect_branch_immediate()?;
-                asm.here += 2;
             }
 
             OperationName::Bne => {
                 asm.next()?;
                 asm.data.push(0xD0);
                 asm.expect_branch_immediate()?;
-                asm.here += 2;
             }
 
             OperationName::Bpl => {
                 asm.next()?;
                 asm.data.push(0x10);
                 asm.expect_branch_immediate()?;
-                asm.here += 2;
             }
 
             OperationName::Brk => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x00);
             }
 
@@ -681,37 +661,31 @@ where
                 asm.next()?;
                 asm.data.push(0x50);
                 asm.expect_branch_immediate()?;
-                asm.here += 2;
             }
 
             OperationName::Bvs => {
                 asm.next()?;
                 asm.data.push(0x70);
                 asm.expect_branch_immediate()?;
-                asm.here += 2;
             }
 
             OperationName::Clc => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x18);
             }
 
             OperationName::Cld => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0xD8);
             }
 
             OperationName::Cli => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x58);
             }
 
             OperationName::Clv => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0xB8);
             }
 
@@ -727,7 +701,6 @@ where
                         asm.next()?;
                         asm.data.push(0xC9);
                         asm.expect_immediate()?;
-                        asm.here += 2;
                     }
 
                     Some(Token::Symbol {
@@ -778,7 +751,6 @@ where
                                 );
                             }
                         }
-                        asm.here += 2;
                         asm.data.push(value);
                     }
 
@@ -786,7 +758,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -810,7 +781,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             match asm.next()? {
@@ -858,14 +828,12 @@ where
                         asm.next()?;
                         asm.data.push(0xE0);
                         asm.expect_immediate()?;
-                        asm.here += 2;
                     }
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 asm.data.push(0xE4);
                                 asm.data.push(value as u8);
                                 return Ok(());
@@ -883,7 +851,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         asm.data.push(0xEC);
                         asm.data.extend_from_slice(&(value as u16).to_le_bytes());
                     }
@@ -902,14 +869,12 @@ where
                         asm.next()?;
                         asm.data.push(0xC0);
                         asm.expect_immediate()?;
-                        asm.here += 2;
                     }
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 asm.data.push(0xC4);
                                 asm.data.push(value as u8);
                                 return Ok(());
@@ -927,7 +892,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         asm.data.push(0xCC);
                         asm.data.extend_from_slice(&(value as u16).to_le_bytes());
                     }
@@ -943,7 +907,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -967,7 +930,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             asm.expect_register(RegisterName::X)?;
@@ -982,13 +944,11 @@ where
 
             OperationName::Dex => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0xCA);
             }
 
             OperationName::Dey => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x88);
             }
 
@@ -1004,7 +964,6 @@ where
                         asm.next()?;
                         asm.data.push(0x49);
                         asm.expect_immediate()?;
-                        asm.here += 2;
                     }
 
                     Some(Token::Symbol {
@@ -1055,7 +1014,6 @@ where
                                 );
                             }
                         }
-                        asm.here += 2;
                         asm.data.push(value);
                     }
 
@@ -1063,7 +1021,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -1087,7 +1044,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             match asm.next()? {
@@ -1132,7 +1088,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -1156,7 +1111,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             asm.expect_register(RegisterName::X)?;
@@ -1171,13 +1125,11 @@ where
 
             OperationName::Inx => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0xE8);
             }
 
             OperationName::Iny => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0xC8);
             }
 
@@ -1205,7 +1157,6 @@ where
                     asm.data.push(0);
                 };
 
-                asm.here += 3;
                 if need_paren {
                     asm.expect_symbol(SymbolName::ParenClose)?;
                 }
@@ -1225,7 +1176,6 @@ where
                     asm.data.push(0);
                     asm.data.push(0);
                 };
-                asm.here += 3;
             }
 
             OperationName::Lda => {
@@ -1240,7 +1190,6 @@ where
                         asm.next()?;
                         asm.data.push(0xA9);
                         asm.expect_immediate()?;
-                        asm.here += 2;
                     }
 
                     Some(Token::Symbol {
@@ -1291,7 +1240,6 @@ where
                                 );
                             }
                         }
-                        asm.here += 2;
                         asm.data.push(value);
                     }
 
@@ -1299,7 +1247,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -1323,7 +1270,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             match asm.next()? {
@@ -1371,14 +1317,12 @@ where
                         asm.next()?;
                         asm.data.push(0xA2);
                         asm.expect_immediate()?;
-                        asm.here += 2;
                     }
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::Y)?;
@@ -1402,7 +1346,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             asm.expect_register(RegisterName::Y)?;
@@ -1427,14 +1370,12 @@ where
                         asm.next()?;
                         asm.data.push(0xA0);
                         asm.expect_immediate()?;
-                        asm.here += 2;
                     }
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -1458,7 +1399,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             asm.expect_register(RegisterName::X)?;
@@ -1481,7 +1421,6 @@ where
                         ..
                     }) => {
                         asm.next()?;
-                        asm.here += 1;
                         asm.data.push(0x4A);
                     }
 
@@ -1489,7 +1428,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -1513,7 +1451,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             asm.expect_register(RegisterName::X)?;
@@ -1528,7 +1465,6 @@ where
 
             OperationName::Nop => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0xEA);
             }
 
@@ -1544,7 +1480,6 @@ where
                         asm.next()?;
                         asm.data.push(0x09);
                         asm.expect_immediate()?;
-                        asm.here += 2;
                     }
 
                     Some(Token::Symbol {
@@ -1595,7 +1530,6 @@ where
                                 );
                             }
                         }
-                        asm.here += 2;
                         asm.data.push(value);
                     }
 
@@ -1603,7 +1537,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -1627,7 +1560,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             match asm.next()? {
@@ -1665,25 +1597,21 @@ where
 
             OperationName::Pha => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x48);
             }
 
             OperationName::Php => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x08);
             }
 
             OperationName::Pla => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x68);
             }
 
             OperationName::Plp => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x28);
             }
 
@@ -1697,7 +1625,6 @@ where
                         ..
                     }) => {
                         asm.next()?;
-                        asm.here += 1;
                         asm.data.push(0x2A);
                     }
 
@@ -1705,7 +1632,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -1729,7 +1655,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             asm.expect_register(RegisterName::X)?;
@@ -1752,7 +1677,6 @@ where
                         ..
                     }) => {
                         asm.next()?;
-                        asm.here += 1;
                         asm.data.push(0x6A);
                     }
 
@@ -1760,7 +1684,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -1784,7 +1707,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             asm.expect_register(RegisterName::X)?;
@@ -1799,13 +1721,11 @@ where
 
             OperationName::Rti => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x40);
             }
 
             OperationName::Rts => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x60);
             }
 
@@ -1821,7 +1741,6 @@ where
                         asm.next()?;
                         asm.data.push(0xE9);
                         asm.expect_immediate()?;
-                        asm.here += 2;
                     }
 
                     Some(Token::Symbol {
@@ -1872,7 +1791,6 @@ where
                                 );
                             }
                         }
-                        asm.here += 2;
                         asm.data.push(value);
                     }
 
@@ -1880,7 +1798,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -1904,7 +1821,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             match asm.next()? {
@@ -1942,19 +1858,16 @@ where
 
             OperationName::Sec => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x38);
             }
 
             OperationName::Sed => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0xF8);
             }
 
             OperationName::Sei => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x78);
             }
 
@@ -2011,7 +1924,6 @@ where
                                 );
                             }
                         }
-                        asm.here += 2;
                         asm.data.push(value);
                     }
 
@@ -2019,7 +1931,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -2043,7 +1954,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
                             match asm.next()? {
@@ -2088,7 +1998,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::Y)?;
@@ -2112,7 +2021,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         asm.data.push(0x8E);
                         asm.data.extend_from_slice(&(value as u16).to_le_bytes());
                     }
@@ -2128,7 +2036,6 @@ where
                         let (loc, expr) = asm.expr()?;
                         let value = if let Some(value) = expr.evaluate(&asm.symtab) {
                             if (value as u32) <= (u8::MAX as u32) {
-                                asm.here += 2;
                                 if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                                     asm.next()?;
                                     asm.expect_register(RegisterName::X)?;
@@ -2152,7 +2059,6 @@ where
                             0
                         };
 
-                        asm.here += 3;
                         asm.data.push(0x8C);
                         asm.data.extend_from_slice(&(value as u16).to_le_bytes());
                     }
@@ -2161,37 +2067,31 @@ where
 
             OperationName::Tax => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0xAA);
             }
 
             OperationName::Tay => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0xA8);
             }
 
             OperationName::Tsx => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0xBA);
             }
 
             OperationName::Txa => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x8A);
             }
 
             OperationName::Txs => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x9A);
             }
 
             OperationName::Tya => {
                 asm.next()?;
-                asm.here += 1;
                 asm.data.push(0x98);
             }
         }

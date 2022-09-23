@@ -1,8 +1,8 @@
 # Introduction
 
-AZ65 is a powerful but simple assembler for the z80, 6502, and sm83 (gbz80)
-processors. In this book you'll learn the ins-and-outs of the assembler and its
-advanced meta-programming capabilities.
+AZ65 is a powerful but simple assembler for the Zilog Z80, MOS 6502, and Sharp
+LR35902 (sm83 / gbz80) architectures. In this book you'll learn the ins-and-outs
+of the assembler and its advanced meta-programming capabilities.
 
 Note that this book only covers using AZ65 and does not cover assembly
 in general.

@@ -27,6 +27,7 @@
   - [`@dw`](./simple/dw.md)
   - [`@ds`](./simple/ds.md)
   - [`@incbin`](./simple/incbin.md)
+  - [`@segment`](./simple/segment.md)
   - [`@struct`](./simple/struct.md)
   - [`@align`](./simple/align.md)
   - [`@meta`](./simple/meta.md)

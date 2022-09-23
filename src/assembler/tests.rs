@@ -107,7 +107,6 @@ where
     ) -> Result<(), (SourceLoc, AssemblerError)> {
         asm.next()?;
         asm.data.push(0);
-        asm.here += 1;
         Ok(())
     }
 }
@@ -640,5 +639,129 @@ fn metaget() {
     assert_eq!(vec![
         0x00,
         0x33
+    ], data);
+}
+
+#[test]
+fn link_byte() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            @db test
+            @defn test, $42
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0x42,
+    ], data);
+}
+
+#[test]
+fn link_word() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            @dw test
+            @defn test, $1234
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0x34, 0x12
+    ], data);
+}
+
+#[test]
+fn link_space() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            @ds 3, test
+            @defn test, $42
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0x42, 0x42, 0x42
+    ], data);
+}
+
+#[test]
+fn code_segment() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            @segment "CODE"
+            nop
+            nop
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0x00,
+        0x00,
+        2, 0x00,
+    ], data);
+}
+
+#[test]
+fn addr_segment() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            @segment "ADDR"
+            @db
+            @dw
+            @ds 3
+            
+            @segment "CODE"
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        6, 0x00,
     ], data);
 }

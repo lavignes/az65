@@ -4,6 +4,7 @@ use std::{
     fmt::Write,
     io::{Cursor, Read},
     iter,
+    marker::PhantomData,
     path::Path,
     rc::Rc,
 };
@@ -129,6 +130,7 @@ enum MacroToken<A: ArchTokens> {
 }
 
 struct Macro<A: ArchTokens> {
+    #[allow(dead_code)]
     loc: SourceLoc,
     args: usize,
     tokens: Vec<MacroToken<A>>,
@@ -156,26 +158,32 @@ struct MacroState<A: ArchTokens> {
     str_interner: Rc<RefCell<StrInterner>>,
 }
 
+enum SegmentMode {
+    Code,
+    Addr,
+}
+
 pub struct Assembler<S, R, A: ArchTokens, Z> {
     file_manager: FileManager<S>,
-    pub str_interner: Rc<RefCell<StrInterner>>,
+    pub(crate) str_interner: Rc<RefCell<StrInterner>>,
     token_sources: Vec<TokenSource<R, A>>,
     token_source: Option<TokenSource<R, A>>,
     cwds: Vec<PathRef>,
     cwd: Option<PathRef>,
     macros: FxHashMap<StrRef, Macro<A>>,
-    pub symtab: Symtab,
-    pub data: Vec<u8>,
-    pub links: Vec<Link>,
+    pub(crate) symtab: Symtab,
+    pub(crate) data: Vec<u8>,
+    seg_mode: SegmentMode,
+    pub(crate) links: Vec<Link>,
 
     uniq: usize,
     stash: Option<Token<A>>,
     loc: Option<SourceLoc>,
-    pub here: u32,
+    pub(crate) here: u32,
     active_namespace: Option<StrRef>,
     active_macro: Option<StrRef>,
 
-    arch_assembler: Z,
+    marker: PhantomData<Z>,
 }
 
 pub trait ArchAssembler<S, R, A: ArchTokens> {
@@ -194,7 +202,7 @@ where
     A: ArchTokens,
     Z: ArchAssembler<S, R, A>,
 {
-    pub fn new(file_system: S, arch_assembler: Z) -> Self {
+    pub fn new(file_system: S, _: Z) -> Self {
         Self {
             file_manager: FileManager::new(file_system),
             str_interner: Rc::new(RefCell::new(StrInterner::new())),
@@ -205,6 +213,7 @@ where
             macros: FxHashMap::default(),
             symtab: Symtab::new(),
             data: Vec::new(),
+            seg_mode: SegmentMode::Code,
             links: Vec::new(),
 
             uniq: 0,
@@ -214,7 +223,7 @@ where
             active_namespace: None,
             active_macro: None,
 
-            arch_assembler,
+            marker: PhantomData,
         }
     }
 
@@ -283,7 +292,7 @@ where
         self.loc.unwrap()
     }
 
-    pub fn peek(&mut self) -> Result<Option<Token<A>>, (SourceLoc, AssemblerError)> {
+    pub(crate) fn peek(&mut self) -> Result<Option<Token<A>>, (SourceLoc, AssemblerError)> {
         loop {
             if self.token_source.is_none() {
                 self.token_source = self.token_sources.pop();
@@ -602,7 +611,7 @@ where
         }
     }
 
-    pub fn next(&mut self) -> Result<Option<Token<A>>, (SourceLoc, AssemblerError)> {
+    pub(crate) fn next(&mut self) -> Result<Option<Token<A>>, (SourceLoc, AssemblerError)> {
         self.peek()?;
         Ok(self.stash.take())
     }
@@ -644,12 +653,15 @@ where
     }
 
     #[inline]
-    pub fn end_of_input_err<T>(&mut self) -> Result<T, (SourceLoc, AssemblerError)> {
+    pub(crate) fn end_of_input_err<T>(&mut self) -> Result<T, (SourceLoc, AssemblerError)> {
         asm_err!(self.loc(), "Unexpected end of input")
     }
 
     #[inline]
-    pub fn expect_symbol(&mut self, sym: SymbolName) -> Result<(), (SourceLoc, AssemblerError)> {
+    pub(crate) fn expect_symbol(
+        &mut self,
+        sym: SymbolName,
+    ) -> Result<(), (SourceLoc, AssemblerError)> {
         match self.next()? {
             Some(Token::Symbol { loc, name }) => {
                 if name != sym {
@@ -668,7 +680,7 @@ where
     }
 
     #[inline]
-    pub fn expect_register(
+    pub(crate) fn expect_register(
         &mut self,
         reg: A::RegisterName,
     ) -> Result<(), (SourceLoc, AssemblerError)> {
@@ -692,7 +704,7 @@ where
         }
     }
 
-    pub fn expect_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
+    pub(crate) fn expect_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
         let (loc, expr) = self.expr()?;
         if let Some(value) = expr.evaluate(&self.symtab) {
             if (value as u32) > (u8::MAX as u32) {
@@ -706,7 +718,7 @@ where
         Ok(())
     }
 
-    pub fn expect_branch_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
+    pub(crate) fn expect_branch_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
         let (loc, mut expr) = self.expr()?;
         expr.push(ExprNode::Value(self.here.wrapping_add(2) as i32)); // subtract where the PC will be
         expr.push(ExprNode::Sub);
@@ -1236,12 +1248,14 @@ where
         Ok(states)
     }
 
-    fn const_expr(&mut self) -> Result<(SourceLoc, Option<i32>), (SourceLoc, AssemblerError)> {
+    pub(crate) fn const_expr(
+        &mut self,
+    ) -> Result<(SourceLoc, Option<i32>), (SourceLoc, AssemblerError)> {
         self.expr()
             .map(|(loc, expr)| (loc, expr.evaluate(&self.symtab)))
     }
 
-    pub fn expr(&mut self) -> Result<(SourceLoc, Expr), (SourceLoc, AssemblerError)> {
+    pub(crate) fn expr(&mut self) -> Result<(SourceLoc, Expr), (SourceLoc, AssemblerError)> {
         let mut nodes = Vec::new();
         let loc = self.expr_prec_0(&mut nodes)?;
         Ok((loc, Expr::new(nodes)))
@@ -1700,7 +1714,7 @@ where
     }
 
     #[inline]
-    pub fn peeked_symbol(
+    pub(crate) fn peeked_symbol(
         &mut self,
         sym: SymbolName,
     ) -> Result<Option<Token<A>>, (SourceLoc, AssemblerError)> {
@@ -2070,91 +2084,113 @@ where
                         DirectiveName::Db => {
                             self.next()?;
 
-                            loop {
-                                match self.peek()? {
-                                    Some(Token::String { loc, value, .. }) => {
-                                        self.next()?;
-                                        let interner = self.str_interner.as_ref().borrow();
-                                        let bytes = interner.get(value).unwrap().as_bytes();
+                            match self.seg_mode {
+                                SegmentMode::Addr => {
+                                    self.here += 1;
+                                }
 
-                                        if (self.here as usize) + bytes.len() > (u16::MAX as usize)
-                                        {
-                                            return asm_err!(
-                                                loc,
-                                                "\"@db\" bytes extend past address $ffff"
-                                            );
-                                        }
-                                        self.here += bytes.len() as u32;
-                                        self.data.extend_from_slice(bytes);
-                                    }
+                                SegmentMode::Code => loop {
+                                    match self.peek()? {
+                                        Some(Token::String { loc, value, .. }) => {
+                                            self.next()?;
+                                            let interner = self.str_interner.as_ref().borrow();
+                                            let bytes = interner.get(value).unwrap().as_bytes();
 
-                                    _ => {
-                                        let (loc, expr) = self.expr()?;
-                                        if let Some(value) = expr.evaluate(&self.symtab) {
-                                            if (value as u32) > (u8::MAX as u32) {
-                                                return asm_err!(loc, "\"@db\" expression result ({value}) will not fit in a byte");
-                                            }
-                                            if (self.here as usize) + 1 > (u16::MAX as usize) {
+                                            if (self.here as usize) + bytes.len()
+                                                > (u16::MAX as usize)
+                                            {
                                                 return asm_err!(
                                                     loc,
                                                     "\"@db\" bytes extend past address $ffff"
                                                 );
                                             }
-                                            self.here += 1;
-                                            self.data.push(value as u8);
-                                        } else {
-                                            self.here += 1;
-                                            self.links.push(Link::byte(loc, self.data.len(), expr));
-                                            self.data.push(0);
+                                            self.here += bytes.len() as u32;
+                                            self.data.extend_from_slice(bytes);
+                                        }
+
+                                        _ => {
+                                            let (loc, expr) = self.expr()?;
+                                            if let Some(value) = expr.evaluate(&self.symtab) {
+                                                if (value as u32) > (u8::MAX as u32) {
+                                                    return asm_err!(loc, "\"@db\" expression result ({value}) will not fit in a byte");
+                                                }
+                                                if (self.here as usize) + 1 > (u16::MAX as usize) {
+                                                    return asm_err!(
+                                                        loc,
+                                                        "\"@db\" bytes extend past address $ffff"
+                                                    );
+                                                }
+                                                self.here += 1;
+                                                self.data.push(value as u8);
+                                            } else {
+                                                self.here += 1;
+                                                self.links.push(Link::byte(
+                                                    loc,
+                                                    self.data.len(),
+                                                    expr,
+                                                ));
+                                                self.data.push(0);
+                                            }
                                         }
                                     }
-                                }
 
-                                if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    self.next()?;
-                                    continue;
-                                }
-                                break;
+                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        self.next()?;
+                                        continue;
+                                    }
+                                    break;
+                                },
                             }
                         }
 
                         DirectiveName::Dw => {
                             self.next()?;
 
-                            loop {
-                                match self.peek()? {
-                                    _ => {
-                                        let (loc, expr) = self.expr()?;
-                                        if let Some(value) = expr.evaluate(&self.symtab) {
-                                            if (value as u32) > (u16::MAX as u32) {
-                                                return asm_err!(
+                            match self.seg_mode {
+                                SegmentMode::Addr => {
+                                    self.here += 2;
+                                }
+
+                                SegmentMode::Code => loop {
+                                    match self.peek()? {
+                                        _ => {
+                                            let (loc, expr) = self.expr()?;
+                                            if let Some(value) = expr.evaluate(&self.symtab) {
+                                                if (value as u32) > (u16::MAX as u32) {
+                                                    return asm_err!(
                                                     loc,
                                                     "\"@dw\" expression result ({value}) will not fit in a word"
                                                 );
-                                            }
-                                            if (self.here as usize) + 1 > (u16::MAX as usize) {
-                                                return asm_err!(
-                                                    loc,
-                                                    "\"@dw\" bytes extend past address $ffff"
+                                                }
+                                                if (self.here as usize) + 1 > (u16::MAX as usize) {
+                                                    return asm_err!(
+                                                        loc,
+                                                        "\"@dw\" bytes extend past address $ffff"
+                                                    );
+                                                }
+                                                self.here += 2;
+                                                self.data.extend_from_slice(
+                                                    &(value as u16).to_le_bytes(),
                                                 );
+                                            } else {
+                                                self.here += 2;
+                                                self.links.push(Link::word(
+                                                    loc,
+                                                    self.data.len(),
+                                                    expr,
+                                                ));
+                                                self.data.push(0);
+                                                self.data.push(0);
                                             }
-                                            self.here += 2;
-                                            self.data
-                                                .extend_from_slice(&(value as u16).to_le_bytes());
-                                        } else {
-                                            self.here += 2;
-                                            self.links.push(Link::word(loc, self.data.len(), expr));
-                                            self.data.push(0);
-                                            self.data.push(0);
                                         }
                                     }
-                                }
 
-                                if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    self.next()?;
-                                    continue;
-                                }
-                                break;
+                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        self.next()?;
+                                        continue;
+                                    }
+                                    break;
+                                },
                             }
                         }
 
@@ -2187,26 +2223,37 @@ where
                                 }
                             };
 
-                            let value = if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                self.next()?;
-                                let (loc, expr) = self.expr()?;
-                                if let Some(value) = expr.evaluate(&self.symtab) {
-                                    if (value as u32) > (u8::MAX as u32) {
-                                        return asm_err!(
+                            match self.seg_mode {
+                                SegmentMode::Addr => {}
+
+                                SegmentMode::Code => {
+                                    let value = if self.peeked_symbol(SymbolName::Comma)?.is_some()
+                                    {
+                                        self.next()?;
+                                        let (loc, expr) = self.expr()?;
+                                        if let Some(value) = expr.evaluate(&self.symtab) {
+                                            if (value as u32) > (u8::MAX as u32) {
+                                                return asm_err!(
                                             loc,
                                             "\"@ds\" value expression result ({value}) will not fit in a byte"
                                         );
-                                    }
-                                    value as u8
-                                } else {
-                                    self.links
-                                        .push(Link::space(loc, self.data.len(), size, expr));
-                                    0
+                                            }
+                                            value as u8
+                                        } else {
+                                            self.links.push(Link::space(
+                                                loc,
+                                                self.data.len(),
+                                                size,
+                                                expr,
+                                            ));
+                                            0
+                                        }
+                                    } else {
+                                        0
+                                    };
+                                    self.data.extend(iter::repeat(value).take(size));
                                 }
-                            } else {
-                                0
-                            };
-                            self.data.extend(iter::repeat(value).take(size));
+                            }
                         }
 
                         DirectiveName::Include => {
@@ -2265,7 +2312,47 @@ where
                             }
                         }
 
+                        DirectiveName::Segment => {
+                            self.next()?;
+                            match self.next()? {
+                                None => return self.end_of_input_err(),
+
+                                Some(Token::String { loc, value }) => {
+                                    let interner = self.str_interner.borrow_mut();
+                                    if interner.eq_some("CODE", value)
+                                        || interner.eq_some("code", value)
+                                    {
+                                        self.seg_mode = SegmentMode::Code
+                                    } else if interner.eq_some("ADDR", value)
+                                        || interner.eq_some("addr", value)
+                                    {
+                                        self.seg_mode = SegmentMode::Addr
+                                    } else {
+                                        let value = interner.get(value).unwrap();
+                                        return asm_err!(
+                                            loc,
+                                            "Unrecognized segment name \"{value}\", only \"CODE\" or \"ADDR\" are valid segment names",
+                                        );
+                                    }
+                                }
+
+                                Some(tok) => {
+                                    return asm_err!(
+                                        tok.loc(),
+                                        "Unexpected {}, expected segment name string",
+                                        tok.as_display(&self.str_interner)
+                                    );
+                                }
+                            }
+                        }
+
                         DirectiveName::Incbin => {
+                            if let SegmentMode::Addr = self.seg_mode {
+                                return asm_err!(
+                                    self.loc(),
+                                    "Binary data cannot be included in an \"ADDR\" segment"
+                                );
+                            }
                             self.next()?;
                             match self.next()? {
                                 None => return self.end_of_input_err(),
@@ -2667,7 +2754,16 @@ where
                 }
 
                 Some(Token::Operation { name, .. }) => {
+                    if let SegmentMode::Addr = self.seg_mode {
+                        return asm_err!(
+                            self.loc(),
+                            "Cannot place instructions in an \"ADDR\" segment.",
+                        );
+                    }
+
+                    let old_len = self.data.len();
                     <Z as ArchAssembler<S, R, A>>::parse(self, name)?;
+                    self.here += (self.data.len() - old_len) as u32;
                 }
 
                 Some(tok) => {

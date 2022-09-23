@@ -8,37 +8,56 @@ use std::{
 
 use az65::{
     assembler::Assembler, fileman::RealFileSystem, linker::DebugExporter, mos6502::Mos6502,
-    namelist::NameList,
+    namelist::NameList, z80::Z80,
 };
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
+/// A multi-CPU assembler
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
+#[clap(propagate_version = true)]
+#[clap(subcommand_required = true)]
 struct Args {
-    /// Path to input assembly file
-    #[clap(parse(from_os_str), value_name = "FILE")]
-    file: PathBuf,
+    /// Target architecture
+    #[clap(subcommand)]
+    architecture: Arch,
 
     /// Path to output binary file [default: stdout]
     #[clap(parse(from_os_str), short, long, value_name = "FILE")]
     output: Option<PathBuf>,
 
-    /// Base path and filename to output FCEUX "NameList" files
-    ///
-    /// For example, passing `-gNL path/myrom.nes` can generate files such as:
-    /// * `path/myrom.nes.ram.nl`
-    /// * `path/myrom.nes.0.nl`
-    #[clap(
-        parse(from_os_str),
-        long = "gNL",
-        value_name = "BASE_NAME",
-        verbatim_doc_comment
-    )]
-    g_nl: Option<PathBuf>,
-
     /// Paths to search for included files [repeatable]
     #[clap(parse(from_os_str), short = 'I', long, value_name = "DIRECTORY")]
     include: Vec<PathBuf>,
+}
+
+#[derive(Debug, Subcommand)]
+enum Arch {
+    #[clap(name = "6502")]
+    Mos6502 {
+        /// Path to input assembly file
+        #[clap(parse(from_os_str), value_name = "FILE")]
+        file: PathBuf,
+
+        /// Base path and filename to output FCEUX "NameList" files
+        ///
+        /// For example, passing `-gNL path/myrom.nes` can generate files such as:
+        /// * `path/myrom.nes.ram.nl`
+        /// * `path/myrom.nes.0.nl`
+        #[clap(
+            parse(from_os_str),
+            long = "gNL",
+            value_name = "BASE_NAME",
+            verbatim_doc_comment
+        )]
+        g_nl: Option<PathBuf>,
+    },
+
+    Z80 {
+        /// Path to input assembly file
+        #[clap(parse(from_os_str), value_name = "FILE")]
+        file: PathBuf,
+    },
 }
 
 fn main() -> ExitCode {
@@ -67,31 +86,55 @@ fn main() -> ExitCode {
     let cwd = env::current_dir().unwrap();
     let full_cwd = fs::canonicalize(cwd).unwrap();
     let file_system = RealFileSystem::new();
-    let mut assembler = Assembler::new(file_system, Mos6502);
-
-    for path in &args.include {
-        if let Err(e) = assembler.add_search_path(full_cwd.as_path(), path) {
-            eprintln!("[ERROR]: {e}");
-            return ExitCode::FAILURE;
+    let module = match &args.architecture {
+        Arch::Mos6502 { file, .. } => {
+            let mut assembler = Assembler::new(file_system, Mos6502);
+            for path in &args.include {
+                if let Err(e) = assembler.add_search_path(full_cwd.as_path(), path) {
+                    eprintln!("[ERROR]: {e}");
+                    return ExitCode::FAILURE;
+                }
+            }
+            match assembler.assemble(full_cwd.as_path(), file) {
+                Ok(module) => module,
+                Err(e) => {
+                    eprintln!("[ERROR]: {e}");
+                    return ExitCode::FAILURE;
+                }
+            }
         }
-    }
-
-    let module = match assembler.assemble(full_cwd.as_path(), args.file) {
-        Ok(module) => module,
-        Err(e) => {
-            eprintln!("[ERROR]: {e}");
-            return ExitCode::FAILURE;
+        Arch::Z80 { file } => {
+            let mut assembler = Assembler::new(file_system, Z80);
+            for path in &args.include {
+                if let Err(e) = assembler.add_search_path(full_cwd.as_path(), path) {
+                    eprintln!("[ERROR]: {e}");
+                    return ExitCode::FAILURE;
+                }
+            }
+            match assembler.assemble(full_cwd.as_path(), file) {
+                Ok(module) => module,
+                Err(e) => {
+                    eprintln!("[ERROR]: {e}");
+                    return ExitCode::FAILURE;
+                }
+            }
         }
     };
 
     match module.link(&mut output) {
         Ok((str_interner, file_system, symtab)) => {
-            if let Some(path) = args.g_nl {
-                let mut nl = NameList::new(file_system, str_interner, full_cwd.as_path(), path);
-                if let Err(e) = nl.export(&symtab) {
-                    eprintln!("[ERROR]: {e}");
-                    return ExitCode::FAILURE;
+            match &args.architecture {
+                Arch::Mos6502 {
+                    g_nl: Some(path), ..
+                } => {
+                    let mut nl = NameList::new(file_system, str_interner, full_cwd.as_path(), path);
+                    if let Err(e) = nl.export(&symtab) {
+                        eprintln!("[ERROR]: {e}");
+                        return ExitCode::FAILURE;
+                    }
                 }
+
+                _ => {}
             }
             ExitCode::SUCCESS
         }
