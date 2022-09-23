@@ -1193,14 +1193,9 @@ where
             OperationName::Bit => {
                 asm.next()?;
                 match asm.const_expr()? {
-                    (loc, None) => {
-                        return Err((
-                            loc,
-                            AssemblerError(format!("Bit index must be immediately solvable")),
-                        ))
-                    }
+                    (loc, None) => return asm_err!(loc, "Bit index must be immediately solvable"),
                     (loc, Some(value)) => {
-                        if value < 0 || value > 7 {
+                        if !(0..=7).contains(&value) {
                             return asm_err!(loc, "Bit index ({value}) must be between 0 and 7");
                         }
 
@@ -5022,14 +5017,9 @@ where
             OperationName::Res => {
                 asm.next()?;
                 match asm.const_expr()? {
-                    (loc, None) => {
-                        return Err((
-                            loc,
-                            AssemblerError(format!("Bit index must be immediately solvable")),
-                        ))
-                    }
+                    (loc, None) => return asm_err!(loc, "Bit index must be immediately solvable"),
                     (loc, Some(value)) => {
-                        if value < 0 || value > 7 {
+                        if !(0..=7).contains(&value) {
                             return asm_err!(loc, "Bit index ({value}) must be between 0 and 7");
                         }
 
@@ -6168,14 +6158,9 @@ where
             OperationName::Set => {
                 asm.next()?;
                 match asm.const_expr()? {
-                    (loc, None) => {
-                        return Err((
-                            loc,
-                            AssemblerError(format!("Bit index must be immediately solvable")),
-                        ))
-                    }
+                    (loc, None) => return asm_err!(loc, "Bit index must be immediately solvable"),
                     (loc, Some(value)) => {
-                        if value < 0 || value > 7 {
+                        if !(0..=7).contains(&value) {
                             return asm_err!(loc, "Bit index ({value}) must be between 0 and 7");
                         }
 

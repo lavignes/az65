@@ -86,9 +86,7 @@ impl Symtab {
 
     #[inline]
     pub fn touch(&mut self, key: StrRef, loc: SourceLoc) {
-        if !self.hits.contains_key(&key) {
-            self.hits.insert(key, loc);
-        }
+        self.hits.entry(key).or_insert(loc);
     }
 
     #[inline]

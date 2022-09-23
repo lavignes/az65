@@ -125,7 +125,7 @@ impl MetaInterner {
     #[inline]
     pub fn intern<M: AsRef<[[StrRef; 2]]>>(&mut self, meta: M) -> MetaRef {
         let meta = meta.as_ref();
-        let mut strings: Vec<[StrRef; 2]> = meta.iter().cloned().collect();
+        let mut strings = meta.to_vec();
         strings.sort();
         let bytes = unsafe {
             // Safety: We preserve pointer validity by chaining buffers together
@@ -153,7 +153,7 @@ impl MetaInterner {
 
     #[inline]
     pub fn eq<M: AsRef<[[StrRef; 2]]>>(&self, expected: M, interned: MetaRef) -> Option<bool> {
-        let mut strings: Vec<[StrRef; 2]> = expected.as_ref().iter().cloned().collect();
+        let mut strings = expected.as_ref().to_vec();
         strings.sort();
         let bytes = unsafe {
             // Safety: We preserve pointer validity by chaining buffers together

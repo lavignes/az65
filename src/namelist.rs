@@ -88,9 +88,7 @@ where
 
             if let Some(bank) = bank {
                 if prg {
-                    if !prg_banks.contains_key(&bank) {
-                        prg_banks.insert(bank, Vec::new());
-                    }
+                    prg_banks.entry(bank).or_insert_with(Vec::new);
                     prg_banks
                         .get_mut(&bank)
                         .unwrap()
@@ -117,14 +115,11 @@ where
             for (label, value) in ram_entries {
                 let interner = self.str_interner.as_ref().borrow();
                 let label = interner.get(*label).unwrap();
-                match writeln!(writer, "${value:04X}#{label}#") {
-                    Err(e) => {
-                        return Err(DebugExporterError::new(format!(
-                            "Failed to write to \"{}\": {e}",
-                            path.display()
-                        )));
-                    }
-                    _ => {}
+                if let Err(e) = writeln!(writer, "${value:04X}#{label}#") {
+                    return Err(DebugExporterError::new(format!(
+                        "Failed to write to \"{}\": {e}",
+                        path.display()
+                    )));
                 }
             }
         }
@@ -147,14 +142,11 @@ where
             for (label, value) in entries {
                 let interner = self.str_interner.as_ref().borrow();
                 let label = interner.get(*label).unwrap();
-                match writeln!(writer, "${value:04X}#{label}#") {
-                    Err(e) => {
-                        return Err(DebugExporterError::new(format!(
-                            "Failed to write to \"{}\": {e}",
-                            path.display()
-                        )));
-                    }
-                    _ => {}
+                if let Err(e) = writeln!(writer, "${value:04X}#{label}#") {
+                    return Err(DebugExporterError::new(format!(
+                        "Failed to write to \"{}\": {e}",
+                        path.display()
+                    )));
                 }
             }
         }

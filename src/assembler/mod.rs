@@ -299,7 +299,7 @@ where
                 self.cwd = self.cwds.pop();
             }
             match self.stash {
-                Some(_) => return Ok(self.stash.clone()),
+                Some(_) => return Ok(self.stash),
 
                 None => match &mut self.token_source {
                     None => return Ok(None),
@@ -323,7 +323,7 @@ where
                                 if self.macros.contains_key(&value) {
                                     let mac = self.expect_macro_invoke(value)?;
                                     self.token_sources.push(self.token_source.take().unwrap());
-                                    self.cwds.push(self.cwd.clone().unwrap());
+                                    self.cwds.push(self.cwd.unwrap());
 
                                     self.token_sources.push(TokenSource::Macro(mac));
                                     self.cwds.push(self.cwd.take().unwrap());
@@ -359,7 +359,7 @@ where
                                 let mac = self.expect_count_directive(loc)?;
 
                                 self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.unwrap().clone());
+                                self.cwds.push(self.cwd.unwrap());
 
                                 self.token_sources.push(TokenSource::Macro(mac));
                                 self.cwds.push(self.cwd.take().unwrap());
@@ -451,7 +451,7 @@ where
                                 );
 
                                 self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.unwrap().clone());
+                                self.cwds.push(self.cwd.unwrap());
 
                                 let uniq = self.uniq;
                                 self.uniq += 1;
@@ -491,7 +491,7 @@ where
                                 };
 
                                 self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.unwrap().clone());
+                                self.cwds.push(self.cwd.unwrap());
 
                                 self.token_sources.push(TokenSource::ParseLexer(Lexer::new(
                                     self.str_interner.clone(),
@@ -509,10 +509,10 @@ where
                             }) => {
                                 let mut states = self.expect_each_directive(loc)?;
                                 self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.clone().unwrap());
+                                self.cwds.push(self.cwd.unwrap());
 
                                 for _ in 0..states.len() {
-                                    self.cwds.push(self.cwd.clone().unwrap());
+                                    self.cwds.push(self.cwd.unwrap());
                                 }
                                 self.cwd = None;
                                 self.token_sources
@@ -528,7 +528,7 @@ where
                                     self.expect_number_directive_arg(loc, DirectiveName::Hex, 16)?;
 
                                 self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.unwrap().clone());
+                                self.cwds.push(self.cwd.unwrap());
 
                                 self.token_sources.push(TokenSource::Macro(mac));
                                 self.cwds.push(self.cwd.take().unwrap());
@@ -543,7 +543,7 @@ where
                                     self.expect_number_directive_arg(loc, DirectiveName::Bin, 2)?;
 
                                 self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.unwrap().clone());
+                                self.cwds.push(self.cwd.unwrap());
 
                                 self.token_sources.push(TokenSource::Macro(mac));
                                 self.cwds.push(self.cwd.take().unwrap());
@@ -2152,37 +2152,28 @@ where
                                 }
 
                                 SegmentMode::Code => loop {
-                                    match self.peek()? {
-                                        _ => {
-                                            let (loc, expr) = self.expr()?;
-                                            if let Some(value) = expr.evaluate(&self.symtab) {
-                                                if (value as u32) > (u16::MAX as u32) {
-                                                    return asm_err!(
-                                                    loc,
-                                                    "\"@dw\" expression result ({value}) will not fit in a word"
-                                                );
-                                                }
-                                                if (self.here as usize) + 1 > (u16::MAX as usize) {
-                                                    return asm_err!(
-                                                        loc,
-                                                        "\"@dw\" bytes extend past address $ffff"
-                                                    );
-                                                }
-                                                self.here += 2;
-                                                self.data.extend_from_slice(
-                                                    &(value as u16).to_le_bytes(),
-                                                );
-                                            } else {
-                                                self.here += 2;
-                                                self.links.push(Link::word(
-                                                    loc,
-                                                    self.data.len(),
-                                                    expr,
-                                                ));
-                                                self.data.push(0);
-                                                self.data.push(0);
-                                            }
+                                    self.peek()?;
+                                    let (loc, expr) = self.expr()?;
+                                    if let Some(value) = expr.evaluate(&self.symtab) {
+                                        if (value as u32) > (u16::MAX as u32) {
+                                            return asm_err!(
+                                            loc,
+                                            "\"@dw\" expression result ({value}) will not fit in a word"
+                                        );
                                         }
+                                        if (self.here as usize) + 1 > (u16::MAX as usize) {
+                                            return asm_err!(
+                                                loc,
+                                                "\"@dw\" bytes extend past address $ffff"
+                                            );
+                                        }
+                                        self.here += 2;
+                                        self.data.extend_from_slice(&(value as u16).to_le_bytes());
+                                    } else {
+                                        self.here += 2;
+                                        self.links.push(Link::word(loc, self.data.len(), expr));
+                                        self.data.push(0);
+                                        self.data.push(0);
                                     }
 
                                     if self.peeked_symbol(SymbolName::Comma)?.is_some() {

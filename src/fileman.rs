@@ -111,7 +111,7 @@ impl<S: FileSystem> FileManager<S> {
     ) -> io::Result<(PathRef, S::Writer)> {
         let pathref = self.intern(cwd, path);
         let path = self.path_interner.get(pathref).unwrap();
-        return Ok((pathref, self.file_system.open_write(path)?));
+        Ok((pathref, self.file_system.open_write(path)?))
     }
 
     fn search<C: AsRef<Path>, P: AsRef<Path>>(

@@ -716,15 +716,13 @@ impl<R: Read, A: ArchTokens> Iterator for Lexer<R, A> {
                     }
                 },
 
-                State::InComment => match c {
-                    '\n' => {
+                State::InComment => {
+                    if c == '\n' {
                         self.state = State::Initial;
                         self.stash = Some(c);
                         return Some(Ok(Token::Comment { loc: self.tok_loc }));
                     }
-
-                    _ => {}
-                },
+                }
 
                 State::InString => match c {
                     '\n' => {
@@ -850,7 +848,7 @@ impl<R: Read, A: ArchTokens> Iterator for Lexer<R, A> {
                         if len == 0 {
                             return Some(Err(LexerError::MalformedCharacterLiteral {
                                 loc: self.tok_loc,
-                                msg: format!("Character literal cannot have 0 length"),
+                                msg: "Character literal cannot have 0 length".into(),
                             }));
                         }
                         if len > 4 {

@@ -123,18 +123,15 @@ fn main() -> ExitCode {
 
     match module.link(&mut output) {
         Ok((str_interner, file_system, symtab)) => {
-            match &args.architecture {
-                Arch::Mos6502 {
-                    g_nl: Some(path), ..
-                } => {
-                    let mut nl = NameList::new(file_system, str_interner, full_cwd.as_path(), path);
-                    if let Err(e) = nl.export(&symtab) {
-                        eprintln!("[ERROR]: {e}");
-                        return ExitCode::FAILURE;
-                    }
+            if let Arch::Mos6502 {
+                g_nl: Some(path), ..
+            } = &args.architecture
+            {
+                let mut nl = NameList::new(file_system, str_interner, full_cwd.as_path(), path);
+                if let Err(e) = nl.export(&symtab) {
+                    eprintln!("[ERROR]: {e}");
+                    return ExitCode::FAILURE;
                 }
-
-                _ => {}
             }
             ExitCode::SUCCESS
         }
