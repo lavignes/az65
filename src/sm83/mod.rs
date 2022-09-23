@@ -537,11 +537,13 @@ where
                         }
                     },
 
-                    Some(tok) => return asm_err!(
+                    Some(tok) => {
+                        return asm_err!(
                         tok.loc(),
                         "Unexpected {}, expected a valid destination register or indirect address",
                         tok.as_display(&asm.str_interner)
-                    ),
+                    )
+                    }
                 }
             }
 

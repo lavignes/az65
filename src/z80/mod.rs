@@ -636,13 +636,11 @@ where
                                 asm.data.push(0x7A);
                             }
 
-                            Some(tok) => {
-                                return asm_err!(
+                            Some(tok) => return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected register \"bc\", \"de\", \"hl\" or \"sp\"",
                                 tok.as_display(&asm.str_interner)
-                            )
-                            }
+                            ),
                         }
                     }
 
@@ -886,13 +884,11 @@ where
                                 asm.data.push(0x39);
                             }
 
-                            Some(tok) => {
-                                return asm_err!(
+                            Some(tok) => return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected register \"bc\", \"de\", \"hl\" or \"sp\"",
                                 tok.as_display(&asm.str_interner)
-                            )
-                            }
+                            ),
                         }
                     }
 
@@ -935,13 +931,11 @@ where
                                 asm.data.push(0x39);
                             }
 
-                            Some(tok) => {
-                                return asm_err!(
+                            Some(tok) => return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected register \"bc\", \"de\", \"ix\" or \"sp\"",
                                 tok.as_display(&asm.str_interner)
-                            )
-                            }
+                            ),
                         }
                     }
 
@@ -984,13 +978,11 @@ where
                                 asm.data.push(0x39);
                             }
 
-                            Some(tok) => {
-                                return asm_err!(
+                            Some(tok) => return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected register \"bc\", \"de\", \"iy\" or \"sp\"",
                                 tok.as_display(&asm.str_interner)
-                            )
-                            }
+                            ),
                         }
                     }
 
@@ -1334,7 +1326,7 @@ where
                             }) => {
                                 match asm.next()? {
                                     Some(Token::Register { name: RegisterName::HL, .. }) => {
-                                                                                asm.data.push(0xCB);
+                                        asm.data.push(0xCB);
                                         asm.data.push(match value {
                                             0 => 0x46,
                                             1 => 0x4E,
@@ -1350,7 +1342,7 @@ where
 
                                     Some(Token::Register { name: RegisterName::IX, .. }) => {
                                         asm.expect_symbol(SymbolName::Plus)?;
-                                                                                asm.data.push(0xDD);
+                                        asm.data.push(0xDD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
                                         if let Some(value) = expr.evaluate(&asm.symtab) {
@@ -1377,7 +1369,7 @@ where
 
                                     Some(Token::Register { name: RegisterName::IY, .. }) => {
                                         asm.expect_symbol(SymbolName::Plus)?;
-                                                                                asm.data.push(0xFD);
+                                        asm.data.push(0xFD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
                                         if let Some(value) = expr.evaluate(&asm.symtab) {
@@ -2034,13 +2026,11 @@ where
                                 asm.data.push(0xE3);
                             }
 
-                            Some(tok) => {
-                                return asm_err!(
+                            Some(tok) => return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected the registers \"hl\", \"ix\", or \"iy\"",
                                 tok.as_display(&asm.str_interner)
-                            )
-                            }
+                            ),
                         }
                     }
 
@@ -2946,11 +2936,11 @@ where
                                     None => return asm.end_of_input_err(),
                                     Some(Token::Register { name: RegisterName::HL, .. }) => {
                                         asm.next()?;
-                                                                                asm.data.push(0x46);
+                                        asm.data.push(0x46);
                                     }
                                     Some(Token::Register { loc, name }) => {
                                         asm.next()?;
-                                                                                match name {
+                                        match name {
                                             RegisterName::IX => {
                                                 asm.data.push(0xDD);
                                                 asm.data.push(0x46);
@@ -3093,11 +3083,11 @@ where
                                     None => return asm.end_of_input_err(),
                                     Some(Token::Register { name: RegisterName::HL, .. }) => {
                                         asm.next()?;
-                                                                                asm.data.push(0x4E);
+                                        asm.data.push(0x4E);
                                     }
                                     Some(Token::Register { loc, name }) => {
                                         asm.next()?;
-                                                                                match name {
+                                        match name {
                                             RegisterName::IX => {
                                                 asm.data.push(0xDD);
                                                 asm.data.push(0x4E);
@@ -3240,11 +3230,11 @@ where
                                     None => return asm.end_of_input_err(),
                                     Some(Token::Register { name: RegisterName::HL, .. }) => {
                                         asm.next()?;
-                                                                                asm.data.push(0x56);
+                                        asm.data.push(0x56);
                                     }
                                     Some(Token::Register { loc, name }) => {
                                         asm.next()?;
-                                                                                match name {
+                                        match name {
                                             RegisterName::IX => {
                                                 asm.data.push(0xDD);
                                                 asm.data.push(0x56);
@@ -3387,11 +3377,11 @@ where
                                     None => return asm.end_of_input_err(),
                                     Some(Token::Register { name: RegisterName::HL, .. }) => {
                                         asm.next()?;
-                                                                                asm.data.push(0x5E);
+                                        asm.data.push(0x5E);
                                     }
                                     Some(Token::Register { loc, name }) => {
                                         asm.next()?;
-                                                                                match name {
+                                        match name {
                                             RegisterName::IX => {
                                                 asm.data.push(0xDD);
                                                 asm.data.push(0x5E);
@@ -3502,11 +3492,11 @@ where
                                     None => return asm.end_of_input_err(),
                                     Some(Token::Register { name: RegisterName::HL, .. }) => {
                                         asm.next()?;
-                                                                                asm.data.push(0x66);
+                                        asm.data.push(0x66);
                                     }
                                     Some(Token::Register { loc, name }) => {
                                         asm.next()?;
-                                                                                match name {
+                                        match name {
                                             RegisterName::IX => {
                                                 asm.data.push(0xDD);
                                                 asm.data.push(0x66);
@@ -3617,11 +3607,11 @@ where
                                     None => return asm.end_of_input_err(),
                                     Some(Token::Register { name: RegisterName::HL, .. }) => {
                                         asm.next()?;
-                                                                                asm.data.push(0x6E);
+                                        asm.data.push(0x6E);
                                     }
                                     Some(Token::Register { loc, name }) => {
                                         asm.next()?;
-                                                                                match name {
+                                        match name {
                                             RegisterName::IX => {
                                                 asm.data.push(0xDD);
                                                 asm.data.push(0x6E);
@@ -4571,29 +4561,29 @@ where
                             match asm.next()? {
                                 None => return asm.end_of_input_err(),
                                 Some(Token::Register { name: RegisterName::A, .. }) => {
-                                                                        asm.data.push(0x32);
+                                    asm.data.push(0x32);
                                 }
                                 Some(Token::Register { name: RegisterName::BC, .. }) => {
-                                                                        asm.data.push(0xED);
+                                    asm.data.push(0xED);
                                     asm.data.push(0x43);
                                 }
                                 Some(Token::Register { name: RegisterName::DE, .. }) => {
-                                                                        asm.data.push(0xED);
+                                    asm.data.push(0xED);
                                     asm.data.push(0x53);
                                 }
                                 Some(Token::Register { name: RegisterName::HL, .. }) => {
-                                                                        asm.data.push(0x22);
+                                    asm.data.push(0x22);
                                 }
                                 Some(Token::Register { name: RegisterName::SP, .. }) => {
-                                                                        asm.data.push(0xED);
+                                    asm.data.push(0xED);
                                     asm.data.push(0x73);
                                 }
                                 Some(Token::Register { name: RegisterName::IX, .. }) => {
-                                                                        asm.data.push(0xDD);
+                                    asm.data.push(0xDD);
                                     asm.data.push(0x22);
                                 }
                                 Some(Token::Register { name: RegisterName::IY, .. }) => {
-                                                                        asm.data.push(0xFD);
+                                    asm.data.push(0xFD);
                                     asm.data.push(0x22);
                                 }
                                 Some(tok) => return asm_err!(tok.loc(),"Unexpected {}, expected registers \"a\", \"bc\", \"de\", \"hl\", \"sp\", \"ix\", or \"iy\"",tok.as_display(&asm.str_interner)),
@@ -4963,23 +4953,23 @@ where
                 match asm.next()? {
                     None => return asm.end_of_input_err(),
                     Some(Token::Register { name: RegisterName::BC, .. }) => {
-                                                asm.data.push(0xC1);
+                        asm.data.push(0xC1);
                     }
                     Some(Token::Register { name: RegisterName::DE, .. }) => {
-                                                asm.data.push(0xD1);
+                        asm.data.push(0xD1);
                     }
                     Some(Token::Register { name: RegisterName::HL, .. }) => {
-                                                asm.data.push(0xE1);
+                        asm.data.push(0xE1);
                     }
                     Some(Token::Register { name: RegisterName::AF, .. }) => {
-                                                asm.data.push(0xF1);
+                        asm.data.push(0xF1);
                     }
                     Some(Token::Register { name: RegisterName::IX, .. }) => {
-                                                asm.data.push(0xDD);
+                        asm.data.push(0xDD);
                         asm.data.push(0xE1);
                     }
                     Some(Token::Register { name: RegisterName::IY, .. }) => {
-                                                asm.data.push(0xFD);
+                        asm.data.push(0xFD);
                         asm.data.push(0xE1);
                     }
                     Some(tok) => return asm_err!(tok.loc(),"Unexpected {}, expected register \"bc\", \"de\", \"hl\", \"af\", \"ix\", or \"iy\"",tok.as_display(&asm.str_interner)),
@@ -4991,23 +4981,23 @@ where
                 match asm.next()? {
                     None => return asm.end_of_input_err(),
                     Some(Token::Register { name: RegisterName::BC, .. }) => {
-                                                asm.data.push(0xC5);
+                        asm.data.push(0xC5);
                     }
                     Some(Token::Register { name: RegisterName::DE, .. }) => {
-                                                asm.data.push(0xD5);
+                        asm.data.push(0xD5);
                     }
                     Some(Token::Register { name: RegisterName::HL, .. }) => {
-                                                asm.data.push(0xE5);
+                        asm.data.push(0xE5);
                     }
                     Some(Token::Register { name: RegisterName::AF, .. }) => {
-                                                asm.data.push(0xF5);
+                        asm.data.push(0xF5);
                     }
                     Some(Token::Register { name: RegisterName::IX, .. }) => {
-                                                asm.data.push(0xDD);
+                        asm.data.push(0xDD);
                         asm.data.push(0xE5);
                     }
                     Some(Token::Register { name: RegisterName::IY, .. }) => {
-                                                asm.data.push(0xFD);
+                        asm.data.push(0xFD);
                         asm.data.push(0xE5);
                     }
                     Some(tok) => return asm_err!(tok.loc(),"Unexpected {}, expected register \"bc\", \"de\", \"hl\", \"af\", \"ix\", or \"iy\"",tok.as_display(&asm.str_interner)),
@@ -5160,7 +5150,7 @@ where
                                 match asm.next()? {
                                     None => return asm.end_of_input_err(),
                                     Some(Token::Register { name: RegisterName::HL, .. }) => {
-                                                                                asm.data.push(0xCB);
+                                        asm.data.push(0xCB);
                                         asm.data.push(match value {
                                             0 => 0x86,
                                             1 => 0x8E,
@@ -5176,7 +5166,7 @@ where
 
                                     Some(Token::Register { name: RegisterName::IX, .. }) => {
                                         asm.expect_symbol(SymbolName::Plus)?;
-                                                                                asm.data.push(0xDD);
+                                        asm.data.push(0xDD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
                                         if let Some(value) = expr.evaluate(&asm.symtab) {
@@ -5203,7 +5193,7 @@ where
 
                                     Some(Token::Register { name: RegisterName::IY, .. }) => {
                                         asm.expect_symbol(SymbolName::Plus)?;
-                                                                                asm.data.push(0xFD);
+                                        asm.data.push(0xFD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
                                         if let Some(value) = expr.evaluate(&asm.symtab) {
@@ -6130,13 +6120,11 @@ where
                                 asm.data.push(0x72);
                             }
 
-                            Some(tok) => {
-                                return asm_err!(
+                            Some(tok) => return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected register \"bc\", \"de\", \"hl\" or \"sp\"",
                                 tok.as_display(&asm.str_interner)
-                            )
-                            }
+                            ),
                         }
                     }
 
@@ -6301,7 +6289,7 @@ where
                                 match asm.next()? {
                                     None => return asm.end_of_input_err(),
                                     Some(Token::Register { name: RegisterName::HL, .. }) => {
-                                                                                asm.data.push(0xCB);
+                                        asm.data.push(0xCB);
                                         asm.data.push(match value {
                                             0 => 0xC6,
                                             1 => 0xCE,
@@ -6317,7 +6305,7 @@ where
 
                                     Some(Token::Register { name: RegisterName::IX, .. }) => {
                                         asm.expect_symbol(SymbolName::Plus)?;
-                                                                                asm.data.push(0xDD);
+                                        asm.data.push(0xDD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
                                         if let Some(value) = expr.evaluate(&asm.symtab) {
@@ -6344,7 +6332,7 @@ where
 
                                     Some(Token::Register { name: RegisterName::IY, .. }) => {
                                         asm.expect_symbol(SymbolName::Plus)?;
-                                                                                asm.data.push(0xFD);
+                                        asm.data.push(0xFD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
                                         if let Some(value) = expr.evaluate(&asm.symtab) {
