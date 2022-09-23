@@ -14,9 +14,10 @@ use crate::{
     expr::{Expr, ExprNode},
     fileman::{FileManager, FileSystem},
     intern::{PathRef, StrInterner, StrRef},
-    lexer::{DirectiveName, LabelKind, Lexer, LexerError, SourceLoc, SymbolName, Token},
+    lexer::{
+        ArchTokens, DirectiveName, LabelKind, Lexer, LexerError, SourceLoc, SymbolName, Token,
+    },
     linker::{Link, Module},
-    ops::{OperationName, RegisterName},
     symtab::{Symbol, Symtab},
 };
 
@@ -29,13 +30,13 @@ macro_rules! asm_err {
     };
 }
 
-enum TokenSource<R> {
-    Lexer(Lexer<R>),
-    ParseLexer(Lexer<Cursor<String>>),
-    Macro(MacroState),
+enum TokenSource<R, A: ArchTokens> {
+    Lexer(Lexer<R, A>),
+    ParseLexer(Lexer<Cursor<String>, A>),
+    Macro(MacroState<A>),
 }
 
-impl<R: Read> TokenSource<R> {
+impl<R: Read, A: ArchTokens> TokenSource<R, A> {
     pub fn loc(&self) -> SourceLoc {
         match self {
             Self::Lexer(lexer) => lexer.loc(),
@@ -54,8 +55,8 @@ impl<R: Read> TokenSource<R> {
 
     fn next(
         &mut self,
-        macros: &mut FxHashMap<StrRef, Macro>,
-    ) -> Option<Result<Token, (SourceLoc, AssemblerError)>> {
+        macros: &mut FxHashMap<StrRef, Macro<A>>,
+    ) -> Option<Result<Token<A>, (SourceLoc, AssemblerError)>> {
         match self {
             Self::Lexer(lexer) => lexer.next().map(|res| res.map_err(LexerError::into)),
             Self::ParseLexer(lexer) => lexer.next().map(|res| res.map_err(LexerError::into)),
@@ -121,21 +122,21 @@ impl<R: Read> TokenSource<R> {
 }
 
 #[derive(Copy, Clone, Debug)]
-enum MacroToken {
-    Token(Token),
+enum MacroToken<A: ArchTokens> {
+    Token(Token<A>),
     Argument { loc: SourceLoc, index: usize },
     Uniq(SourceLoc),
 }
 
-struct Macro {
+struct Macro<A: ArchTokens> {
     loc: SourceLoc,
     args: usize,
-    tokens: Vec<MacroToken>,
+    tokens: Vec<MacroToken<A>>,
 }
 
 #[derive(thiserror::Error, Debug)]
 #[error("{0}")]
-pub struct AssemblerError(String);
+pub struct AssemblerError(pub String);
 
 impl From<LexerError> for (SourceLoc, AssemblerError) {
     fn from(e: LexerError) -> Self {
@@ -143,9 +144,9 @@ impl From<LexerError> for (SourceLoc, AssemblerError) {
     }
 }
 
-struct MacroState {
+struct MacroState<A: ArchTokens> {
     name: StrRef,
-    args: Vec<Vec<Token>>,
+    args: Vec<Vec<Token<A>>>,
     macro_offset: usize,
     expanding_macro_arg: Option<usize>,
     macro_arg_offset: usize,
@@ -155,32 +156,45 @@ struct MacroState {
     str_interner: Rc<RefCell<StrInterner>>,
 }
 
-pub struct Assembler<S, R> {
+pub struct Assembler<S, R, A: ArchTokens, Z> {
     file_manager: FileManager<S>,
-    str_interner: Rc<RefCell<StrInterner>>,
-    token_sources: Vec<TokenSource<R>>,
-    token_source: Option<TokenSource<R>>,
+    pub str_interner: Rc<RefCell<StrInterner>>,
+    token_sources: Vec<TokenSource<R, A>>,
+    token_source: Option<TokenSource<R, A>>,
     cwds: Vec<PathRef>,
     cwd: Option<PathRef>,
-    macros: FxHashMap<StrRef, Macro>,
-    symtab: Symtab,
-    data: Vec<u8>,
-    links: Vec<Link>,
+    macros: FxHashMap<StrRef, Macro<A>>,
+    pub symtab: Symtab,
+    pub data: Vec<u8>,
+    pub links: Vec<Link>,
 
     uniq: usize,
-    stash: Option<Token>,
+    stash: Option<Token<A>>,
     loc: Option<SourceLoc>,
-    here: u32,
+    pub here: u32,
     active_namespace: Option<StrRef>,
     active_macro: Option<StrRef>,
+
+    arch_assembler: Z,
 }
 
-impl<S, R> Assembler<S, R>
+pub trait ArchAssembler<S, R, A: ArchTokens> {
+    fn parse(
+        asm: &mut Assembler<S, R, A, Self>,
+        name: A::OperationName,
+    ) -> Result<(), (SourceLoc, AssemblerError)>
+    where
+        Self: Sized;
+}
+
+impl<S, R, A, Z> Assembler<S, R, A, Z>
 where
     S: FileSystem<Reader = R>,
     R: Read,
+    A: ArchTokens,
+    Z: ArchAssembler<S, R, A>,
 {
-    pub fn new(file_system: S) -> Self {
+    pub fn new(file_system: S, arch_assembler: Z) -> Self {
         Self {
             file_manager: FileManager::new(file_system),
             str_interner: Rc::new(RefCell::new(StrInterner::new())),
@@ -199,6 +213,8 @@ where
             here: 0,
             active_namespace: None,
             active_macro: None,
+
+            arch_assembler,
         }
     }
 
@@ -267,14 +283,14 @@ where
         self.loc.unwrap()
     }
 
-    fn peek(&mut self) -> Result<Option<&Token>, (SourceLoc, AssemblerError)> {
+    pub fn peek(&mut self) -> Result<Option<Token<A>>, (SourceLoc, AssemblerError)> {
         loop {
             if self.token_source.is_none() {
                 self.token_source = self.token_sources.pop();
                 self.cwd = self.cwds.pop();
             }
             match self.stash {
-                Some(_) => return Ok(self.stash.as_ref()),
+                Some(_) => return Ok(self.stash.clone()),
 
                 None => match &mut self.token_source {
                     None => return Ok(None),
@@ -586,13 +602,8 @@ where
         }
     }
 
-    fn next(&mut self) -> Result<Option<Token>, (SourceLoc, AssemblerError)> {
-        if let Some(&_tok) = self.peek()? {
-            // let depth = iter::repeat(' ')
-            //     .take(self.token_sources.len())
-            //     .collect::<String>();
-            // println!("{}tok = {}", depth, tok.as_display(&self.str_interner));
-        }
+    pub fn next(&mut self) -> Result<Option<Token<A>>, (SourceLoc, AssemblerError)> {
+        self.peek()?;
         Ok(self.stash.take())
     }
 
@@ -632,12 +643,13 @@ where
         AssemblerError(msg)
     }
 
-    fn end_of_input_err<T>(&mut self) -> Result<T, (SourceLoc, AssemblerError)> {
+    #[inline]
+    pub fn end_of_input_err<T>(&mut self) -> Result<T, (SourceLoc, AssemblerError)> {
         asm_err!(self.loc(), "Unexpected end of input")
     }
 
     #[inline]
-    fn expect_symbol(&mut self, sym: SymbolName) -> Result<(), (SourceLoc, AssemblerError)> {
+    pub fn expect_symbol(&mut self, sym: SymbolName) -> Result<(), (SourceLoc, AssemblerError)> {
         match self.next()? {
             Some(Token::Symbol { loc, name }) => {
                 if name != sym {
@@ -656,7 +668,10 @@ where
     }
 
     #[inline]
-    fn expect_register(&mut self, reg: RegisterName) -> Result<(), (SourceLoc, AssemblerError)> {
+    pub fn expect_register(
+        &mut self,
+        reg: A::RegisterName,
+    ) -> Result<(), (SourceLoc, AssemblerError)> {
         match self.next()? {
             Some(Token::Register { loc, name }) => {
                 if name != reg {
@@ -677,7 +692,7 @@ where
         }
     }
 
-    fn expect_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
+    pub fn expect_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
         let (loc, expr) = self.expr()?;
         if let Some(value) = expr.evaluate(&self.symtab) {
             if (value as u32) > (u8::MAX as u32) {
@@ -691,7 +706,7 @@ where
         Ok(())
     }
 
-    fn expect_branch_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
+    pub fn expect_branch_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
         let (loc, mut expr) = self.expr()?;
         expr.push(ExprNode::Value(self.here.wrapping_add(2) as i32)); // subtract where the PC will be
         expr.push(ExprNode::Sub);
@@ -711,7 +726,7 @@ where
     fn expect_macro_invoke(
         &mut self,
         name: StrRef,
-    ) -> Result<MacroState, (SourceLoc, AssemblerError)> {
+    ) -> Result<MacroState<A>, (SourceLoc, AssemblerError)> {
         let mut args = Vec::new();
         let arg_count = self.macros.get(&name).unwrap().args;
         let loc = self.loc();
@@ -783,7 +798,7 @@ where
     fn expect_string_directive_arg(
         &mut self,
         loc: SourceLoc,
-    ) -> Result<Token, (SourceLoc, AssemblerError)> {
+    ) -> Result<Token<A>, (SourceLoc, AssemblerError)> {
         let mut string = String::new();
         let mut brace_depth = 0;
         loop {
@@ -862,7 +877,7 @@ where
         loc: SourceLoc,
         directive_name: DirectiveName,
         base: u32,
-    ) -> Result<MacroState, (SourceLoc, AssemblerError)> {
+    ) -> Result<MacroState<A>, (SourceLoc, AssemblerError)> {
         let value = match self.const_expr()? {
             (_, Some(value)) => {
                 value
@@ -922,7 +937,7 @@ where
     fn expect_count_directive(
         &mut self,
         loc: SourceLoc,
-    ) -> Result<MacroState, (SourceLoc, AssemblerError)> {
+    ) -> Result<MacroState<A>, (SourceLoc, AssemblerError)> {
         let count = match self.const_expr()? {
             (loc, Some(value)) => {
                 if value < 0 {
@@ -990,7 +1005,7 @@ where
     fn expect_label_directive_arg(
         &mut self,
         loc: SourceLoc,
-    ) -> Result<Token, (SourceLoc, AssemblerError)> {
+    ) -> Result<Token<A>, (SourceLoc, AssemblerError)> {
         let mut string = String::new();
         let mut brace_depth = 0;
         loop {
@@ -1092,7 +1107,7 @@ where
     fn expect_each_directive(
         &mut self,
         loc: SourceLoc,
-    ) -> Result<Vec<MacroState>, (SourceLoc, AssemblerError)> {
+    ) -> Result<Vec<MacroState<A>>, (SourceLoc, AssemblerError)> {
         let mut args = Vec::new();
         let mut brace_depth = 0;
         loop {
@@ -1226,7 +1241,7 @@ where
             .map(|(loc, expr)| (loc, expr.evaluate(&self.symtab)))
     }
 
-    fn expr(&mut self) -> Result<(SourceLoc, Expr), (SourceLoc, AssemblerError)> {
+    pub fn expr(&mut self) -> Result<(SourceLoc, Expr), (SourceLoc, AssemblerError)> {
         let mut nodes = Vec::new();
         let loc = self.expr_prec_0(&mut nodes)?;
         Ok((loc, Expr::new(nodes)))
@@ -1552,7 +1567,7 @@ where
         nodes: &mut Vec<ExprNode>,
     ) -> Result<SourceLoc, (SourceLoc, AssemblerError)> {
         match self.peek()? {
-            Some(&Token::Symbol {
+            Some(Token::Symbol {
                 loc,
                 name: SymbolName::Minus,
             }) => {
@@ -1562,7 +1577,7 @@ where
                 Ok(loc)
             }
 
-            Some(&Token::Symbol {
+            Some(Token::Symbol {
                 loc,
                 name: SymbolName::Bang,
             }) => {
@@ -1572,7 +1587,7 @@ where
                 Ok(loc)
             }
 
-            Some(&Token::Symbol {
+            Some(Token::Symbol {
                 loc,
                 name: SymbolName::Tilde,
             }) => {
@@ -1582,7 +1597,7 @@ where
                 Ok(loc)
             }
 
-            Some(&Token::Symbol {
+            Some(Token::Symbol {
                 loc,
                 name: SymbolName::LessThan,
             }) => {
@@ -1592,7 +1607,7 @@ where
                 Ok(loc)
             }
 
-            Some(&Token::Symbol {
+            Some(Token::Symbol {
                 loc,
                 name: SymbolName::GreaterThan,
             }) => {
@@ -1602,7 +1617,7 @@ where
                 Ok(loc)
             }
 
-            Some(&Token::Symbol {
+            Some(Token::Symbol {
                 loc,
                 name: SymbolName::ParenOpen,
             }) => {
@@ -1615,13 +1630,13 @@ where
                 Ok(loc)
             }
 
-            Some(&Token::Number { loc, value }) => {
+            Some(Token::Number { loc, value }) => {
                 self.next()?;
                 nodes.push(ExprNode::Value(value as i32));
                 Ok(loc)
             }
 
-            Some(&Token::Directive { loc, name }) => match name {
+            Some(Token::Directive { loc, name }) => match name {
                 DirectiveName::Here => {
                     self.next()?;
                     nodes.push(ExprNode::Value(self.here as i32));
@@ -1630,7 +1645,7 @@ where
                 _ => asm_err!(loc, "\"{name}\" directives are allowed in expressions"),
             },
 
-            Some(&Token::Label { loc, kind, value }) => {
+            Some(Token::Label { loc, kind, value }) => {
                 self.next()?;
                 let direct = match kind {
                     LabelKind::Global | LabelKind::Direct => value,
@@ -1674,7 +1689,7 @@ where
                 Ok(loc)
             }
 
-            Some(&tok) => asm_err!(
+            Some(tok) => asm_err!(
                 tok.loc(),
                 "Unexpected {} in expression",
                 tok.as_display(&self.str_interner)
@@ -1685,12 +1700,12 @@ where
     }
 
     #[inline]
-    fn peeked_symbol(
+    pub fn peeked_symbol(
         &mut self,
         sym: SymbolName,
-    ) -> Result<Option<Token>, (SourceLoc, AssemblerError)> {
+    ) -> Result<Option<Token<A>>, (SourceLoc, AssemblerError)> {
         match self.peek()? {
-            Some(&tok @ Token::Symbol { name, .. }) if name == sym => Ok(Some(tok)),
+            Some(tok @ Token::Symbol { name, .. }) if name == sym => Ok(Some(tok)),
             _ => Ok(None),
         }
     }
@@ -1705,7 +1720,7 @@ where
                     self.next()?;
                 }
 
-                Some(&Token::Label { loc, value, kind }) => {
+                Some(Token::Label { loc, value, kind }) => {
                     let direct = match kind {
                         LabelKind::Global => {
                             self.active_namespace = Some(value);
@@ -1744,7 +1759,7 @@ where
                     }
                 }
 
-                Some(tok @ &Token::Directive { loc, name }) => {
+                Some(tok @ Token::Directive { loc, name }) => {
                     match name {
                         DirectiveName::Org => {
                             self.next()?;
@@ -1764,7 +1779,7 @@ where
                             self.next()?;
 
                             match self.peek()? {
-                                Some(&Token::String { value, ..  }) => {
+                                Some(Token::String { value, ..  }) => {
                                     self.next()?;
                                     let interner = self.str_interner.as_ref().borrow();
                                     let value = interner.get(value).unwrap();
@@ -1790,7 +1805,7 @@ where
                             match self.peek()? {
                                 None => return self.end_of_input_err(),
 
-                                Some(&Token::String { value, .. }) => {
+                                Some(Token::String { value, .. }) => {
                                     self.next()?;
                                     let interner = self.str_interner.as_ref().borrow();
                                     let value = interner.get(value).unwrap();
@@ -1848,7 +1863,7 @@ where
                             let (direct, loc) = match self.peek()? {
                                 None => return self.end_of_input_err(),
 
-                                Some(&Token::Label { loc, value, kind }) => match kind {
+                                Some(Token::Label { loc, value, kind }) => match kind {
                                     LabelKind::Global | LabelKind::Direct => (value, loc),
 
                                     LabelKind::Local => {
@@ -1893,7 +1908,7 @@ where
                             let (direct, loc) = match self.peek()? {
                                 None => return self.end_of_input_err(),
 
-                                Some(&Token::Label { loc, value, kind }) => match kind {
+                                Some(Token::Label { loc, value, kind }) => match kind {
                                     LabelKind::Global | LabelKind::Direct => (value, loc),
 
                                     LabelKind::Local => {
@@ -1924,7 +1939,10 @@ where
                             if self.symtab.get(direct).is_some() {
                                 let interner = self.str_interner.as_ref().borrow();
                                 let label = interner.get(direct).unwrap();
-                                return asm_err!(loc, "The constant \"{label}\" was already defined");
+                                return asm_err!(
+                                    loc,
+                                    "The constant \"{label}\" was already defined"
+                                );
                             }
 
                             self.expect_symbol(SymbolName::Comma)?;
@@ -2054,7 +2072,7 @@ where
 
                             loop {
                                 match self.peek()? {
-                                    Some(&Token::String { loc, value, .. }) => {
+                                    Some(Token::String { loc, value, .. }) => {
                                         self.next()?;
                                         let interner = self.str_interner.as_ref().borrow();
                                         let bytes = interner.get(value).unwrap().as_bytes();
@@ -2526,8 +2544,10 @@ where
                                                             );
                                                 }
                                                 (_, Some(field_size)) => {
-                                                    self.symtab
-                                                        .insert_no_meta(direct, Symbol::Value(struct_size));
+                                                    self.symtab.insert_no_meta(
+                                                        direct,
+                                                        Symbol::Value(struct_size),
+                                                    );
                                                     struct_size =
                                                         struct_size.wrapping_add(field_size);
                                                 }
@@ -2544,7 +2564,8 @@ where
                                 }
                             }
                             self.active_namespace = old_namespace;
-                            self.symtab.insert_no_meta(value, Symbol::Value(struct_size));
+                            self.symtab
+                                .insert_no_meta(value, Symbol::Value(struct_size));
                         }
 
                         DirectiveName::Align => {
@@ -2608,7 +2629,7 @@ where
                                             return asm_err!(
                                                 tok.loc(),
                                                 "Unexpected {}, expected a metadata value",
-                                                tok.clone().as_display(&self.str_interner)
+                                                tok.as_display(&self.str_interner)
                                             );
                                         }
                                     },
@@ -2617,7 +2638,7 @@ where
                                         return asm_err!(
                                             tok.loc(),
                                             "Unexpected {}, expected a metadata key",
-                                            tok.clone().as_display(&self.str_interner)
+                                            tok.as_display(&self.str_interner)
                                         );
                                     }
                                 }
@@ -2639,1917 +2660,17 @@ where
                             return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}",
-                                tok.clone().as_display(&self.str_interner)
+                                tok.as_display(&self.str_interner)
                             );
                         }
                     }
                 }
 
                 Some(Token::Operation { name, .. }) => {
-                    match name {
-                        OperationName::Adc => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::Hash,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.data.push(0x69);
-                                    self.expect_immediate()?;
-                                    self.here += 2;
-                                }
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::ParenOpen,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) > (u8::MAX as u32) {
-                                            return asm_err!(loc, "Expression result ({value}) will not fit in a byte");
-                                        }
-                                        value as u8
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::byte(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-                                    match self.next()? {
-                                        None => return self.end_of_input_err(),
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::Comma,
-                                            ..
-                                        }) => {
-                                            self.data.push(0x61);
-                                            self.expect_register(RegisterName::X)?;
-                                            self.expect_symbol(SymbolName::ParenClose)?;
-                                        }
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::ParenClose,
-                                            ..
-                                        }) => {
-                                            self.data.push(0x71);
-                                            self.expect_symbol(SymbolName::Comma)?;
-                                            self.expect_register(RegisterName::Y)?;
-                                        }
-
-                                        Some(tok) => {
-                                            return asm_err!(
-                                                tok.loc(),
-                                                "Unexpected {}, expected \",\" or \")\"",
-                                                tok.as_display(&self.str_interner)
-                                            );
-                                        }
-                                    }
-                                    self.data.push(value);
-                                    self.here += 2;
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0x75);
-                                            } else {
-                                                self.data.push(0x65);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        match self.next()? {
-                                            None => return self.end_of_input_err(),
-
-                                            Some(Token::Register {
-                                                name: RegisterName::X,
-                                                ..
-                                            }) => {
-                                                self.data.push(0x7D);
-                                            }
-
-                                            Some(Token::Register {
-                                                name: RegisterName::Y,
-                                                ..
-                                            }) => {
-                                                self.data.push(0x79);
-                                            }
-
-                                            Some(tok) => {
-                                                return asm_err!(
-                                                    tok.loc(),
-                                                    "Unexpected {}, expected register \"x\" or \"y\"",
-                                                    tok.as_display(&self.str_interner)
-                                                );
-                                            }
-                                        }
-                                    } else {
-                                        self.data.push(0x6D);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::And => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::Hash,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.data.push(0x29);
-                                    self.expect_immediate()?;
-                                    self.here += 2;
-                                }
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::ParenOpen,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) > (u8::MAX as u32) {
-                                            return asm_err!(loc, "Expression result ({value}) will not fit in a byte");
-                                        }
-                                        value as u8
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::byte(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-                                    match self.next()? {
-                                        None => return self.end_of_input_err(),
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::Comma,
-                                            ..
-                                        }) => {
-                                            self.data.push(0x21);
-                                            self.expect_register(RegisterName::X)?;
-                                            self.expect_symbol(SymbolName::ParenClose)?;
-                                        }
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::ParenClose,
-                                            ..
-                                        }) => {
-                                            self.data.push(0x31);
-                                            self.expect_symbol(SymbolName::Comma)?;
-                                            self.expect_register(RegisterName::Y)?;
-                                        }
-
-                                        Some(tok) => {
-                                            return asm_err!(
-                                                tok.loc(),
-                                                "Unexpected {}, expected \",\" or \")\"",
-                                                tok.as_display(&self.str_interner)
-                                            );
-                                        }
-                                    }
-                                    self.here += 2;
-                                    self.data.push(value);
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0x35);
-                                            } else {
-                                                self.data.push(0x25);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        match self.next()? {
-                                            None => return self.end_of_input_err(),
-
-                                            Some(Token::Register {
-                                                name: RegisterName::X,
-                                                ..
-                                            }) => {
-                                                self.data.push(0x3D);
-                                            }
-
-                                            Some(Token::Register {
-                                                name: RegisterName::Y,
-                                                ..
-                                            }) => {
-                                                self.data.push(0x39);
-                                            }
-
-                                            Some(tok) => {
-                                                return asm_err!(
-                                                    tok.loc(),
-                                                    "Unexpected {}, expected register \"x\" or \"y\"",
-                                                    tok.as_display(&self.str_interner)
-                                                );
-                                            }
-                                        }
-                                    } else {
-                                        self.data.push(0x2D);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Asl => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Register {
-                                    name: RegisterName::A,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.here += 1;
-                                    self.data.push(0x0A);
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0x16);
-                                            } else {
-                                                self.data.push(0x06);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        self.expect_register(RegisterName::X)?;
-                                        self.data.push(0x1E);
-                                    } else {
-                                        self.data.push(0x0E);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Bcc => {
-                            self.next()?;
-                            self.data.push(0x90);
-                            self.expect_branch_immediate()?;
-                            self.here += 2;
-                        }
-
-                        OperationName::Bcs => {
-                            self.next()?;
-                            self.data.push(0xB0);
-                            self.expect_branch_immediate()?;
-                            self.here += 2;
-                        }
-
-                        OperationName::Beq => {
-                            self.next()?;
-                            self.data.push(0xF0);
-                            self.expect_branch_immediate()?;
-                            self.here += 2;
-                        }
-
-                        OperationName::Bit => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            self.data.push(0x24);
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    self.data.push(0x2C);
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Bmi => {
-                            self.next()?;
-                            self.data.push(0x30);
-                            self.expect_branch_immediate()?;
-                            self.here += 2;
-                        }
-
-                        OperationName::Bne => {
-                            self.next()?;
-                            self.data.push(0xD0);
-                            self.expect_branch_immediate()?;
-                            self.here += 2;
-                        }
-
-                        OperationName::Bpl => {
-                            self.next()?;
-                            self.data.push(0x10);
-                            self.expect_branch_immediate()?;
-                            self.here += 2;
-                        }
-
-                        OperationName::Brk => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x00);
-                        }
-
-                        OperationName::Bvc => {
-                            self.next()?;
-                            self.data.push(0x50);
-                            self.expect_branch_immediate()?;
-                            self.here += 2;
-                        }
-
-                        OperationName::Bvs => {
-                            self.next()?;
-                            self.data.push(0x70);
-                            self.expect_branch_immediate()?;
-                            self.here += 2;
-                        }
-
-                        OperationName::Clc => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x18);
-                        }
-
-                        OperationName::Cld => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0xD8);
-                        }
-
-                        OperationName::Cli => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x58);
-                        }
-
-                        OperationName::Clv => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0xB8);
-                        }
-
-                        OperationName::Cmp => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::Hash,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.data.push(0xC9);
-                                    self.expect_immediate()?;
-                                    self.here += 2;
-                                }
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::ParenOpen,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) > (u8::MAX as u32) {
-                                            return asm_err!(loc, "Expression result ({value}) will not fit in a byte");
-                                        }
-                                        value as u8
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::byte(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-                                    match self.next()? {
-                                        None => return self.end_of_input_err(),
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::Comma,
-                                            ..
-                                        }) => {
-                                            self.data.push(0xC1);
-                                            self.expect_register(RegisterName::X)?;
-                                            self.expect_symbol(SymbolName::ParenClose)?;
-                                        }
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::ParenClose,
-                                            ..
-                                        }) => {
-                                            self.data.push(0xD1);
-                                            self.expect_symbol(SymbolName::Comma)?;
-                                            self.expect_register(RegisterName::Y)?;
-                                        }
-
-                                        Some(tok) => {
-                                            return asm_err!(
-                                                tok.loc(),
-                                                "Unexpected {}, expected \",\" or \")\"",
-                                                tok.as_display(&self.str_interner)
-                                            );
-                                        }
-                                    }
-                                    self.here += 2;
-                                    self.data.push(value);
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0xD5);
-                                            } else {
-                                                self.data.push(0xC5);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        match self.next()? {
-                                            None => return self.end_of_input_err(),
-
-                                            Some(Token::Register {
-                                                name: RegisterName::X,
-                                                ..
-                                            }) => {
-                                                self.data.push(0xDD);
-                                            }
-
-                                            Some(Token::Register {
-                                                name: RegisterName::Y,
-                                                ..
-                                            }) => {
-                                                self.data.push(0xD9);
-                                            }
-
-                                            Some(tok) => {
-                                                return asm_err!(
-                                                    tok.loc(),
-                                                    "Unexpected {}, expected register \"x\" or \"y\"",
-                                                    tok.as_display(&self.str_interner)
-                                                );
-                                            }
-                                        }
-                                    } else {
-                                        self.data.push(0xCD);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Cpx => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::Hash,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.data.push(0xE0);
-                                    self.expect_immediate()?;
-                                    self.here += 2;
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            self.data.push(0xE4);
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    self.data.push(0xEC);
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Cpy => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::Hash,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.data.push(0xC0);
-                                    self.expect_immediate()?;
-                                    self.here += 2;
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            self.data.push(0xC4);
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    self.data.push(0xCC);
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Dec => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0xD6);
-                                            } else {
-                                                self.data.push(0xC6);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        self.expect_register(RegisterName::X)?;
-                                        self.data.push(0xDE);
-                                    } else {
-                                        self.data.push(0xCE);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Dex => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0xCA);
-                        }
-
-                        OperationName::Dey => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x88);
-                        }
-
-                        OperationName::Eor => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::Hash,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.data.push(0x49);
-                                    self.expect_immediate()?;
-                                    self.here += 2;
-                                }
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::ParenOpen,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) > (u8::MAX as u32) {
-                                            return asm_err!(loc, "Expression result ({value}) will not fit in a byte");
-                                        }
-                                        value as u8
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::byte(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-                                    match self.next()? {
-                                        None => return self.end_of_input_err(),
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::Comma,
-                                            ..
-                                        }) => {
-                                            self.data.push(0x41);
-                                            self.expect_register(RegisterName::X)?;
-                                            self.expect_symbol(SymbolName::ParenClose)?;
-                                        }
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::ParenClose,
-                                            ..
-                                        }) => {
-                                            self.data.push(0x51);
-                                            self.expect_symbol(SymbolName::Comma)?;
-                                            self.expect_register(RegisterName::Y)?;
-                                        }
-
-                                        Some(tok) => {
-                                            return asm_err!(
-                                                tok.loc(),
-                                                "Unexpected {}, expected \",\" or \")\"",
-                                                tok.as_display(&self.str_interner)
-                                            );
-                                        }
-                                    }
-                                    self.here += 2;
-                                    self.data.push(value);
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0x55);
-                                            } else {
-                                                self.data.push(0x45);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        match self.next()? {
-                                            None => return self.end_of_input_err(),
-
-                                            Some(Token::Register {
-                                                name: RegisterName::X,
-                                                ..
-                                            }) => {
-                                                self.data.push(0x5D);
-                                            }
-
-                                            Some(Token::Register {
-                                                name: RegisterName::Y,
-                                                ..
-                                            }) => {
-                                                self.data.push(0x59);
-                                            }
-
-                                            Some(tok) => {
-                                                return asm_err!(
-                                                    tok.loc(),
-                                                    "Unexpected {}, expected register \"x\" or \"y\"",
-                                                    tok.as_display(&self.str_interner)
-                                                );
-                                            }
-                                        }
-                                    } else {
-                                        self.data.push(0x4D);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Inc => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0xF6);
-                                            } else {
-                                                self.data.push(0xE6);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        self.expect_register(RegisterName::X)?;
-                                        self.data.push(0xFE);
-                                    } else {
-                                        self.data.push(0xEE);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Inx => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0xE8);
-                        }
-
-                        OperationName::Iny => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0xC8);
-                        }
-
-                        OperationName::Jmp => {
-                            self.next()?;
-
-                            let need_paren = if self.peeked_symbol(SymbolName::ParenOpen)?.is_some()
-                            {
-                                self.next()?;
-                                self.data.push(0x6C);
-                                true
-                            } else {
-                                self.data.push(0x4C);
-                                false
-                            };
-
-                            let (loc, expr) = self.expr()?;
-                            if let Some(value) = expr.evaluate(&self.symtab) {
-                                if (value as u32) > (u16::MAX as u32) {
-                                    return asm_err!(
-                                        loc,
-                                        "Expression result ({value}) will not fit in a word"
-                                    );
-                                }
-                                self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                            } else {
-                                self.links.push(Link::word(loc, self.data.len(), expr));
-                                self.data.push(0);
-                                self.data.push(0);
-                            };
-
-                            self.here += 3;
-                            if need_paren {
-                                self.expect_symbol(SymbolName::ParenClose)?;
-                            }
-                        }
-
-                        OperationName::Jsr => {
-                            self.next()?;
-                            self.data.push(0x20);
-                            let (loc, expr) = self.expr()?;
-                            if let Some(value) = expr.evaluate(&self.symtab) {
-                                if (value as u32) > (u16::MAX as u32) {
-                                    return asm_err!(
-                                        loc,
-                                        "Expression result ({value}) will not fit in a word"
-                                    );
-                                }
-                                self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                            } else {
-                                self.links.push(Link::word(loc, self.data.len(), expr));
-                                self.data.push(0);
-                                self.data.push(0);
-                            };
-                            self.here += 3;
-                        }
-
-                        OperationName::Lda => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::Hash,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.data.push(0xA9);
-                                    self.expect_immediate()?;
-                                    self.here += 2;
-                                }
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::ParenOpen,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) > (u8::MAX as u32) {
-                                            return asm_err!(loc, "Expression result ({value}) will not fit in a byte");
-                                        }
-                                        value as u8
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::byte(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-                                    match self.next()? {
-                                        None => return self.end_of_input_err(),
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::Comma,
-                                            ..
-                                        }) => {
-                                            self.data.push(0xA1);
-                                            self.expect_register(RegisterName::X)?;
-                                            self.expect_symbol(SymbolName::ParenClose)?;
-                                        }
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::ParenClose,
-                                            ..
-                                        }) => {
-                                            self.data.push(0xB1);
-                                            self.expect_symbol(SymbolName::Comma)?;
-                                            self.expect_register(RegisterName::Y)?;
-                                        }
-
-                                        Some(tok) => {
-                                            return asm_err!(
-                                                tok.loc(),
-                                                "Unexpected {}, expected \",\" or \")\"",
-                                                tok.as_display(&self.str_interner)
-                                            );
-                                        }
-                                    }
-                                    self.here += 2;
-                                    self.data.push(value);
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0xB5);
-                                            } else {
-                                                self.data.push(0xA5);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        match self.next()? {
-                                            None => return self.end_of_input_err(),
-
-                                            Some(Token::Register {
-                                                name: RegisterName::X,
-                                                ..
-                                            }) => {
-                                                self.data.push(0xBD);
-                                            }
-
-                                            Some(Token::Register {
-                                                name: RegisterName::Y,
-                                                ..
-                                            }) => {
-                                                self.data.push(0xB9);
-                                            }
-
-                                            Some(tok) => {
-                                                return asm_err!(
-                                                    tok.loc(),
-                                                    "Unexpected {}, expected register \"x\" or \"y\"",
-                                                    tok.as_display(&self.str_interner)
-                                                );
-                                            }
-                                        }
-                                    } else {
-                                        self.data.push(0xAD);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Ldx => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::Hash,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.data.push(0xA2);
-                                    self.expect_immediate()?;
-                                    self.here += 2;
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::Y)?;
-                                                self.data.push(0xB6);
-                                            } else {
-                                                self.data.push(0xA6);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        self.expect_register(RegisterName::Y)?;
-                                        self.data.push(0xBE);
-                                    } else {
-                                        self.data.push(0xAE);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Ldy => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::Hash,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.data.push(0xA0);
-                                    self.expect_immediate()?;
-                                    self.here += 2;
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0xB4);
-                                            } else {
-                                                self.data.push(0xA4);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        self.expect_register(RegisterName::X)?;
-                                        self.data.push(0xBC);
-                                    } else {
-                                        self.data.push(0xAC);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Lsr => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Register {
-                                    name: RegisterName::A,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.here += 1;
-                                    self.data.push(0x4A);
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0x56);
-                                            } else {
-                                                self.data.push(0x46);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        self.expect_register(RegisterName::X)?;
-                                        self.data.push(0x5E);
-                                    } else {
-                                        self.data.push(0x4E);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Nop => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0xEA);
-                        }
-
-                        OperationName::Ora => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::Hash,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.data.push(0x09);
-                                    self.expect_immediate()?;
-                                    self.here += 2;
-                                }
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::ParenOpen,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) > (u8::MAX as u32) {
-                                            return asm_err!(loc, "Expression result ({value}) will not fit in a byte");
-                                        }
-                                        value as u8
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::byte(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-                                    match self.next()? {
-                                        None => return self.end_of_input_err(),
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::Comma,
-                                            ..
-                                        }) => {
-                                            self.data.push(0x01);
-                                            self.expect_register(RegisterName::X)?;
-                                            self.expect_symbol(SymbolName::ParenClose)?;
-                                        }
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::ParenClose,
-                                            ..
-                                        }) => {
-                                            self.data.push(0x11);
-                                            self.expect_symbol(SymbolName::Comma)?;
-                                            self.expect_register(RegisterName::Y)?;
-                                        }
-
-                                        Some(tok) => {
-                                            return asm_err!(
-                                                tok.loc(),
-                                                "Unexpected {}, expected \",\" or \")\"",
-                                                tok.as_display(&self.str_interner)
-                                            );
-                                        }
-                                    }
-                                    self.here += 2;
-                                    self.data.push(value);
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0x15);
-                                            } else {
-                                                self.data.push(0x05);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        match self.next()? {
-                                            None => return self.end_of_input_err(),
-
-                                            Some(Token::Register {
-                                                name: RegisterName::X,
-                                                ..
-                                            }) => {
-                                                self.data.push(0x1D);
-                                            }
-
-                                            Some(Token::Register {
-                                                name: RegisterName::Y,
-                                                ..
-                                            }) => {
-                                                self.data.push(0x19);
-                                            }
-
-                                            Some(tok) => {
-                                                return asm_err!(
-                                                    tok.loc(),
-                                                    "Unexpected {}, expected register \"x\" or \"y\"",
-                                                    tok.as_display(&self.str_interner)
-                                                );
-                                            }
-                                        }
-                                    } else {
-                                        self.data.push(0x0D);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Pha => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x48);
-                        }
-
-                        OperationName::Php => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x08);
-                        }
-
-                        OperationName::Pla => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x68);
-                        }
-
-                        OperationName::Plp => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x28);
-                        }
-
-                        OperationName::Rol => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Register {
-                                    name: RegisterName::A,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.here += 1;
-                                    self.data.push(0x2A);
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0x36);
-                                            } else {
-                                                self.data.push(0x26);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        self.expect_register(RegisterName::X)?;
-                                        self.data.push(0x3E);
-                                    } else {
-                                        self.data.push(0x2E);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Ror => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Register {
-                                    name: RegisterName::A,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.here += 1;
-                                    self.data.push(0x6A);
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0x76);
-                                            } else {
-                                                self.data.push(0x66);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        self.expect_register(RegisterName::X)?;
-                                        self.data.push(0x7E);
-                                    } else {
-                                        self.data.push(0x6E);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Rti => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x40);
-                        }
-
-                        OperationName::Rts => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x60);
-                        }
-
-                        OperationName::Sbc => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::Hash,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    self.data.push(0xE9);
-                                    self.expect_immediate()?;
-                                    self.here += 2;
-                                }
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::ParenOpen,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) > (u8::MAX as u32) {
-                                            return asm_err!(loc, "Expression result ({value}) will not fit in a byte");
-                                        }
-                                        value as u8
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::byte(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-                                    match self.next()? {
-                                        None => return self.end_of_input_err(),
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::Comma,
-                                            ..
-                                        }) => {
-                                            self.data.push(0xE1);
-                                            self.expect_register(RegisterName::X)?;
-                                            self.expect_symbol(SymbolName::ParenClose)?;
-                                        }
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::ParenClose,
-                                            ..
-                                        }) => {
-                                            self.data.push(0xF1);
-                                            self.expect_symbol(SymbolName::Comma)?;
-                                            self.expect_register(RegisterName::Y)?;
-                                        }
-
-                                        Some(tok) => {
-                                            return asm_err!(
-                                                tok.loc(),
-                                                "Unexpected {}, expected \",\" or \")\"",
-                                                tok.as_display(&self.str_interner)
-                                            );
-                                        }
-                                    }
-                                    self.here += 2;
-                                    self.data.push(value);
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0xF5);
-                                            } else {
-                                                self.data.push(0xE5);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        match self.next()? {
-                                            None => return self.end_of_input_err(),
-
-                                            Some(Token::Register {
-                                                name: RegisterName::X,
-                                                ..
-                                            }) => {
-                                                self.data.push(0xFD);
-                                            }
-
-                                            Some(Token::Register {
-                                                name: RegisterName::Y,
-                                                ..
-                                            }) => {
-                                                self.data.push(0xF9);
-                                            }
-
-                                            Some(tok) => {
-                                                return asm_err!(
-                                                    tok.loc(),
-                                                    "Unexpected {}, expected register \"x\" or \"y\"",
-                                                    tok.as_display(&self.str_interner)
-                                                );
-                                            }
-                                        }
-                                    } else {
-                                        self.data.push(0xED);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Sec => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x38);
-                        }
-
-                        OperationName::Sed => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0xF8);
-                        }
-
-                        OperationName::Sei => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x78);
-                        }
-
-                        OperationName::Sta => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(Token::Symbol {
-                                    name: SymbolName::ParenOpen,
-                                    ..
-                                }) => {
-                                    self.next()?;
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) > (u8::MAX as u32) {
-                                            return asm_err!(loc, "Expression result ({value}) will not fit in a byte");
-                                        }
-                                        value as u8
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::byte(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-                                    match self.next()? {
-                                        None => return self.end_of_input_err(),
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::Comma,
-                                            ..
-                                        }) => {
-                                            self.data.push(0x81);
-                                            self.expect_register(RegisterName::X)?;
-                                            self.expect_symbol(SymbolName::ParenClose)?;
-                                        }
-
-                                        Some(Token::Symbol {
-                                            name: SymbolName::ParenClose,
-                                            ..
-                                        }) => {
-                                            self.data.push(0x91);
-                                            self.expect_symbol(SymbolName::Comma)?;
-                                            self.expect_register(RegisterName::Y)?;
-                                        }
-
-                                        Some(tok) => {
-                                            return asm_err!(
-                                                tok.loc(),
-                                                "Unexpected {}, expected \",\" or \")\"",
-                                                tok.as_display(&self.str_interner)
-                                            );
-                                        }
-                                    }
-                                    self.here += 2;
-                                    self.data.push(value);
-                                }
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0x95);
-                                            } else {
-                                                self.data.push(0x85);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                        self.next()?;
-                                        match self.next()? {
-                                            None => return self.end_of_input_err(),
-
-                                            Some(Token::Register {
-                                                name: RegisterName::X,
-                                                ..
-                                            }) => {
-                                                self.data.push(0x9D);
-                                            }
-
-                                            Some(Token::Register {
-                                                name: RegisterName::Y,
-                                                ..
-                                            }) => {
-                                                self.data.push(0x99);
-                                            }
-
-                                            Some(tok) => {
-                                                return asm_err!(
-                                                    tok.loc(),
-                                                    "Unexpected {}, expected register \"x\" or \"y\"",
-                                                    tok.as_display(&self.str_interner)
-                                                );
-                                            }
-                                        }
-                                    } else {
-                                        self.data.push(0x8D);
-                                    }
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Stx => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::Y)?;
-                                                self.data.push(0x96);
-                                            } else {
-                                                self.data.push(0x86);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    self.data.push(0x8E);
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Sty => {
-                            self.next()?;
-                            match self.peek()? {
-                                None => return self.end_of_input_err(),
-
-                                Some(_) => {
-                                    let (loc, expr) = self.expr()?;
-                                    let value = if let Some(value) = expr.evaluate(&self.symtab) {
-                                        if (value as u32) <= (u8::MAX as u32) {
-                                            self.here += 2;
-                                            if self.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                                self.next()?;
-                                                self.expect_register(RegisterName::X)?;
-                                                self.data.push(0x94);
-                                            } else {
-                                                self.data.push(0x84);
-                                            }
-                                            self.data.push(value as u8);
-                                            continue;
-                                        }
-                                        if (value as u32) > (u16::MAX as u32) {
-                                            return asm_err!(
-                                                loc,
-                                                "Expression result ({value}) will not fit in a word"
-                                            );
-                                        }
-                                        value
-                                    } else {
-                                        // We need to add 1 since we havent written the opcode yet :|
-                                        self.links.push(Link::word(loc, self.data.len() + 1, expr));
-                                        0
-                                    };
-
-                                    self.here += 3;
-                                    self.data.push(0x8C);
-                                    self.data.extend_from_slice(&(value as u16).to_le_bytes());
-                                }
-                            }
-                        }
-
-                        OperationName::Tax => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0xAA);
-                        }
-
-                        OperationName::Tay => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0xA8);
-                        }
-
-                        OperationName::Tsx => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0xBA);
-                        }
-
-                        OperationName::Txa => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x8A);
-                        }
-
-                        OperationName::Txs => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x9A);
-                        }
-
-                        OperationName::Tya => {
-                            self.next()?;
-                            self.here += 1;
-                            self.data.push(0x98);
-                        }
-                    }
+                    <Z as ArchAssembler<S, R, A>>::parse(self, name)?;
                 }
 
-                Some(&tok) => {
+                Some(tok) => {
                     return asm_err!(
                         tok.loc(),
                         "Unexpected {}",

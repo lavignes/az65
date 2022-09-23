@@ -6,10 +6,11 @@ use std::{
     process::ExitCode,
 };
 
-use clap::Parser;
+use az65::mos6502::Mos6502;
 use az65::{
     assembler::Assembler, fileman::RealFileSystem, linker::DebugExporter, namelist::NameList,
 };
+use clap::Parser;
 
 #[derive(clap::Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -66,7 +67,7 @@ fn main() -> ExitCode {
     let cwd = env::current_dir().unwrap();
     let full_cwd = fs::canonicalize(cwd).unwrap();
     let file_system = RealFileSystem::new();
-    let mut assembler = Assembler::new(file_system);
+    let mut assembler = Assembler::new(file_system, Mos6502);
 
     for path in &args.include {
         if let Err(e) = assembler.add_search_path(full_cwd.as_path(), path) {

@@ -5,6 +5,6 @@ pub mod fileman;
 pub mod intern;
 pub mod lexer;
 pub mod linker;
+pub mod mos6502;
 pub mod namelist;
-pub mod ops;
 pub mod symtab;

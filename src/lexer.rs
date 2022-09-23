@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+use std::marker::PhantomData;
 use std::{
     cell::{Ref, RefCell, RefMut},
     fmt::{self, Display, Formatter},
@@ -8,7 +10,6 @@ use std::{
 use crate::{
     charreader::{CharReader, CharReaderError},
     intern::{PathRef, StrInterner, StrRef},
-    ops::{OperationName, RegisterName},
 };
 
 #[derive(Copy, Clone, Debug)]
@@ -74,6 +75,24 @@ impl LexerError {
             Self::MalformedLabel { loc, .. } => *loc,
         }
     }
+}
+
+pub trait ArchTokens: Copy + Clone {
+    type RegisterName: RegisterName;
+    type FlagName: FlagName;
+    type OperationName: OperationName;
+}
+
+pub trait RegisterName: Copy + Display + Debug + Eq {
+    fn parse<S: AsRef<str>>(s: S) -> Option<Self>;
+}
+
+pub trait FlagName: Copy + Display + Debug + Eq {
+    fn parse<S: AsRef<str>>(s: S) -> Option<Self>;
+}
+
+pub trait OperationName: Copy + Display + Debug + Eq {
+    fn parse<S: AsRef<str>>(s: S) -> Option<Self>;
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -223,6 +242,7 @@ pub enum DirectiveName {
     EndEach,
     Count,
     Parse,
+    Segment,
 }
 
 impl DirectiveName {
@@ -260,6 +280,7 @@ impl DirectiveName {
             "@endeach" | "@ENDEACH" => Some(Self::EndEach),
             "@count" | "@COUNT" => Some(Self::Count),
             "@parse" | "@PARSE" => Some(Self::Parse),
+            "@segment" | "@SEGMENT" => Some(Self::Segment),
             _ => None,
         }
     }
@@ -303,6 +324,7 @@ impl Display for DirectiveName {
                 Self::EndEach => "@endeach",
                 Self::Count => "@count",
                 Self::Parse => "@parse",
+                Self::Segment => "@segment",
             }
         )
     }
@@ -336,7 +358,7 @@ pub enum LabelKind {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum Token {
+pub enum Token<A: ArchTokens> {
     Comment {
         loc: SourceLoc,
     },
@@ -353,7 +375,7 @@ pub enum Token {
     },
     Operation {
         loc: SourceLoc,
-        name: OperationName,
+        name: A::OperationName,
     },
     Directive {
         loc: SourceLoc,
@@ -375,7 +397,11 @@ pub enum Token {
     },
     Register {
         loc: SourceLoc,
-        name: RegisterName,
+        name: A::RegisterName,
+    },
+    Flag {
+        loc: SourceLoc,
+        name: A::FlagName,
     },
     Symbol {
         loc: SourceLoc,
@@ -388,7 +414,7 @@ pub enum Token {
     },
 }
 
-impl Token {
+impl<A: ArchTokens> Token<A> {
     #[inline]
     pub fn loc(&self) -> SourceLoc {
         match self {
@@ -402,6 +428,7 @@ impl Token {
             Self::MacroArg { loc, .. } => *loc,
             Self::NestedMacroArg { loc, .. } => *loc,
             Self::Register { loc, .. } => *loc,
+            Self::Flag { loc, .. } => *loc,
             Self::Symbol { loc, .. } => *loc,
             Self::Label { loc, .. } => *loc,
         }
@@ -411,7 +438,7 @@ impl Token {
     pub fn as_display<'a>(
         &'a self,
         str_interner: &'a Rc<RefCell<StrInterner>>,
-    ) -> DisplayToken<'a> {
+    ) -> DisplayToken<'a, A> {
         DisplayToken {
             inner: self,
             str_interner,
@@ -419,12 +446,12 @@ impl Token {
     }
 }
 
-pub struct DisplayToken<'a> {
-    inner: &'a Token,
+pub struct DisplayToken<'a, A: ArchTokens> {
+    inner: &'a Token<A>,
     str_interner: &'a Rc<RefCell<StrInterner>>,
 }
 
-impl<'a> Display for DisplayToken<'a> {
+impl<'a, A: ArchTokens> Display for DisplayToken<'a, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let Self {
             inner,
@@ -449,6 +476,7 @@ impl<'a> Display for DisplayToken<'a> {
                 write!(f, "{name}\"")
             }
             Token::Register { name, .. } => write!(f, "register: \"{name}\""),
+            Token::Flag { name, .. } => write!(f, "flag: \"{name}\""),
             Token::MacroArg { value, .. } => write!(f, "macro argument: \"@{value}\""),
             Token::NestedMacroArg { level, value, .. } => {
                 write!(f, "nested macro argument: \"")?;
@@ -467,7 +495,7 @@ impl<'a> Display for DisplayToken<'a> {
     }
 }
 
-pub struct Lexer<R> {
+pub struct Lexer<R, A> {
     str_interner: Rc<RefCell<StrInterner>>,
     loc: SourceLoc,
     tok_loc: SourceLoc,
@@ -477,9 +505,11 @@ pub struct Lexer<R> {
     state: State,
     buffer: String,
     eof: bool,
+
+    marker: PhantomData<A>,
 }
 
-impl<R: Read> Lexer<R> {
+impl<R: Read, A> Lexer<R, A> {
     #[inline]
     pub fn new(
         str_interner: Rc<RefCell<StrInterner>>,
@@ -502,6 +532,7 @@ impl<R: Read> Lexer<R> {
             state: State::Initial,
             buffer: String::new(),
             eof: false,
+            marker: PhantomData,
         }
     }
 
@@ -583,8 +614,8 @@ impl<R: Read> Lexer<R> {
     }
 }
 
-impl<R: Read> Iterator for Lexer<R> {
-    type Item = Result<Token, LexerError>;
+impl<R: Read, A: ArchTokens> Iterator for Lexer<R, A> {
+    type Item = Result<Token<A>, LexerError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -1160,15 +1191,22 @@ impl<R: Read> Iterator for Lexer<R> {
                         self.state = State::Initial;
                         self.stash = Some(c);
 
-                        if let Some(name) = OperationName::parse(&self.buffer) {
+                        if let Some(name) = A::OperationName::parse(&self.buffer) {
                             return Some(Ok(Token::Operation {
                                 loc: self.tok_loc,
                                 name,
                             }));
                         }
 
-                        if let Some(name) = RegisterName::parse(&self.buffer) {
+                        if let Some(name) = A::RegisterName::parse(&self.buffer) {
                             return Some(Ok(Token::Register {
+                                loc: self.tok_loc,
+                                name,
+                            }));
+                        }
+
+                        if let Some(name) = A::FlagName::parse(&self.buffer) {
+                            return Some(Ok(Token::Flag {
                                 loc: self.tok_loc,
                                 name,
                             }));
@@ -1215,7 +1253,46 @@ mod tests {
     use super::*;
     use crate::intern::PathInterner;
 
-    fn lexer(text: &str) -> Lexer<Cursor<&str>> {
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct TestName;
+
+    impl Display for TestName {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+            write!(f, "nop")
+        }
+    }
+
+    impl RegisterName for TestName {
+        fn parse<S: AsRef<str>>(_: S) -> Option<Self> {
+            None
+        }
+    }
+
+    impl FlagName for TestName {
+        fn parse<S: AsRef<str>>(_: S) -> Option<Self> {
+            None
+        }
+    }
+
+    impl OperationName for TestName {
+        fn parse<S: AsRef<str>>(s: S) -> Option<Self> {
+            match s.as_ref() {
+                "nop" => Some(Self),
+                _ => None,
+            }
+        }
+    }
+
+    #[derive(Copy, Clone)]
+    struct TestArchTokens;
+
+    impl ArchTokens for TestArchTokens {
+        type RegisterName = TestName;
+        type FlagName = TestName;
+        type OperationName = TestName;
+    }
+
+    fn lexer(text: &str) -> Lexer<Cursor<&str>, TestArchTokens> {
         let path_interner = Rc::new(RefCell::new(PathInterner::new()));
         let str_interner = Rc::new(RefCell::new(StrInterner::new()));
         let pathref = path_interner.borrow_mut().intern("file.test");
@@ -1598,39 +1675,6 @@ mod tests {
             lexer.next(),
             Some(Ok(Token::Symbol {
                 name: SymbolName::Question,
-                ..
-            }))
-        ));
-        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
-        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
-        assert!(matches!(lexer.next(), None));
-    }
-
-    #[test]
-    fn regnames() {
-        let text = r#"
-            a x y
-        "#;
-        let mut lexer = lexer(text);
-        assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
-        assert!(matches!(
-            lexer.next(),
-            Some(Ok(Token::Register {
-                name: RegisterName::A,
-                ..
-            }))
-        ));
-        assert!(matches!(
-            lexer.next(),
-            Some(Ok(Token::Register {
-                name: RegisterName::X,
-                ..
-            }))
-        ));
-        assert!(matches!(
-            lexer.next(),
-            Some(Ok(Token::Register {
-                name: RegisterName::Y,
                 ..
             }))
         ));

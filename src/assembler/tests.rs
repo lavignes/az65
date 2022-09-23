@@ -1,4 +1,6 @@
+use std::fmt::{Display, Formatter};
 use std::{
+    fmt,
     io::{self, Cursor},
     path::{Path, PathBuf},
 };
@@ -7,6 +9,7 @@ use fxhash::FxHashMap;
 
 use super::*;
 use crate::fileman::FileSystem;
+use crate::lexer::{FlagName, OperationName, RegisterName};
 
 struct StringFileSystem {
     files: FxHashMap<PathBuf, String>,
@@ -50,1566 +53,67 @@ impl FileSystem for StringFileSystem {
     }
 }
 
-fn assembler<P: AsRef<Path>>(files: &[(P, &str)]) -> Assembler<StringFileSystem, Cursor<String>> {
-    Assembler::new(StringFileSystem::new(files))
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+struct TestName;
+
+impl Display for TestName {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "nop")
+    }
 }
 
-#[test]
-fn adc() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            adc #$42
-            adc $42
-            adc $42, x
-            adc $cafe
-            adc $cafe, x
-            adc $cafe, y
-            adc ($42, x)
-            adc ($42), y
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x69, 0x42,
-        0x65, 0x42,
-        0x75, 0x42,
-        0x6D, 0xfe, 0xca,
-        0x7D, 0xfe, 0xca,
-        0x79, 0xfe, 0xca,
-        0x61, 0x42,
-        0x71, 0x42,
-        19, 0x00
-    ], data);
+impl RegisterName for TestName {
+    fn parse<S: AsRef<str>>(_: S) -> Option<Self> {
+        None
+    }
 }
 
-#[test]
-fn and() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            and #$42
-            and $42
-            and $42, x
-            and $cafe
-            and $cafe, x
-            and $cafe, y
-            and ($42, x)
-            and ($42), y
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x29, 0x42,
-        0x25, 0x42,
-        0x35, 0x42,
-        0x2D, 0xfe, 0xca,
-        0x3D, 0xfe, 0xca,
-        0x39, 0xfe, 0xca,
-        0x21, 0x42,
-        0x31, 0x42,
-        19, 0x00
-    ], data);
+impl FlagName for TestName {
+    fn parse<S: AsRef<str>>(_: S) -> Option<Self> {
+        None
+    }
 }
 
-#[test]
-fn asl() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            asl a
-            asl $42
-            asl $42, x
-            asl $cafe
-            asl $cafe, x
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x0A,
-        0x06, 0x42,
-        0x16, 0x42,
-        0x0E, 0xfe, 0xca,
-        0x1E, 0xfe, 0xca,
-        11, 0x00
-    ], data);
+impl OperationName for TestName {
+    fn parse<S: AsRef<str>>(s: S) -> Option<Self> {
+        match s.as_ref() {
+            "nop" => Some(Self),
+            _ => None,
+        }
+    }
 }
 
-#[test]
-fn bcc() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            @org 100
-            bar: nop
-            @org 0
-            foo: bcc foo
-            bcc bar
-            @dw @here
-        "#,
-    )]);
+#[derive(Copy, Clone)]
+struct TestArchTokens;
 
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xEA,
-        0x90, -2i8 as u8,
-        0x90, 96i8 as u8,
-        4, 0x00
-    ], data);
+impl ArchTokens for TestArchTokens {
+    type RegisterName = TestName;
+    type FlagName = TestName;
+    type OperationName = TestName;
 }
 
-#[test]
-fn bcs() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            @org 100
-            bar: nop
-            @org 0
-            foo: bcs foo
-            bcs bar
-            @dw @here
-        "#,
-    )]);
+struct TestArchAssembler;
 
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xEA,
-        0xB0, -2i8 as u8,
-        0xB0, 96i8 as u8,
-        4, 0x00
-    ], data);
+impl<S, R> ArchAssembler<S, R, TestArchTokens> for TestArchAssembler
+where
+    S: FileSystem<Reader = R>,
+    R: Read,
+{
+    fn parse(
+        asm: &mut Assembler<S, R, TestArchTokens, Self>,
+        _: TestName,
+    ) -> Result<(), (SourceLoc, AssemblerError)> {
+        asm.next()?;
+        asm.data.push(0);
+        asm.here += 1;
+        Ok(())
+    }
 }
 
-#[test]
-fn beq() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            @org 100
-            bar: nop
-            @org 0
-            foo: beq foo
-            beq bar
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xEA,
-        0xF0, -2i8 as u8,
-        0xF0, 96i8 as u8,
-        4, 0x00
-    ], data);
-}
-
-#[test]
-fn bit() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            bit $42
-            bit $cafe
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x24, 0x42,
-        0x2C, 0xfe, 0xca,
-        5, 0x00
-    ], data);
-}
-
-#[test]
-fn bmi() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            @org 100
-            bar: nop
-            @org 0
-            foo: bmi foo
-            bmi bar
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xEA,
-        0x30, -2i8 as u8,
-        0x30, 96i8 as u8,
-        4, 0x00
-    ], data);
-}
-
-#[test]
-fn bne() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            @org 100
-            bar: nop
-            @org 0
-            foo: bne foo
-            bne bar
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xEA,
-        0xD0, -2i8 as u8,
-        0xD0, 96i8 as u8,
-        4, 0x00
-    ], data);
-}
-
-#[test]
-fn bpl() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            @org 100
-            bar: nop
-            @org 0
-            foo: bpl foo
-            bpl bar
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xEA,
-        0x10, -2i8 as u8,
-        0x10, 96i8 as u8,
-        4, 0x00
-    ], data);
-}
-
-#[test]
-fn brk() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            brk
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x00,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn bvc() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            @org 100
-            bar: nop
-            @org 0
-            foo: bvc foo
-            bvc bar
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xEA,
-        0x50, -2i8 as u8,
-        0x50, 96i8 as u8,
-        4, 0x00
-    ], data);
-}
-
-#[test]
-fn bvs() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            @org 100
-            bar: nop
-            @org 0
-            foo: bvs foo
-            bvs bar
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xEA,
-        0x70, -2i8 as u8,
-        0x70, 96i8 as u8,
-        4, 0x00
-    ], data);
-}
-
-#[test]
-fn clc() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            clc
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x18,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn cld() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            cld
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xD8,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn cli() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            cli
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x58,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn clv() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            clv
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xB8,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn cmp() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            cmp #$42
-            cmp $42
-            cmp $42, x
-            cmp $cafe
-            cmp $cafe, x
-            cmp $cafe, y
-            cmp ($42, x)
-            cmp ($42), y
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xC9, 0x42,
-        0xC5, 0x42,
-        0xD5, 0x42,
-        0xCD, 0xfe, 0xca,
-        0xDD, 0xfe, 0xca,
-        0xD9, 0xfe, 0xca,
-        0xC1, 0x42,
-        0xD1, 0x42,
-        19, 0x00
-    ], data);
-}
-
-#[test]
-fn cpx() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            cpx #$42
-            cpx $42
-            cpx $cafe
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xE0, 0x42,
-        0xE4, 0x42,
-        0xEC, 0xfe, 0xca,
-        7, 0x00
-    ], data);
-}
-
-#[test]
-fn cpy() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            cpy #$42
-            cpy $42
-            cpy $cafe
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xC0, 0x42,
-        0xC4, 0x42,
-        0xCC, 0xfe, 0xca,
-        7, 0x00
-    ], data);
-}
-
-#[test]
-fn dec() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            dec $42
-            dec $42, x
-            dec $cafe
-            dec $cafe, x
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xC6, 0x42,
-        0xD6, 0x42,
-        0xCE, 0xfe, 0xca,
-        0xDE, 0xfe, 0xca,
-        10, 0x00
-    ], data);
-}
-
-#[test]
-fn dex() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            dex
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xCA,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn dey() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            dey
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x88,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn eor() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            eor #$42
-            eor $42
-            eor $42, x
-            eor $cafe
-            eor $cafe, x
-            eor $cafe, y
-            eor ($42, x)
-            eor ($42), y
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x49, 0x42,
-        0x45, 0x42,
-        0x55, 0x42,
-        0x4D, 0xfe, 0xca,
-        0x5D, 0xfe, 0xca,
-        0x59, 0xfe, 0xca,
-        0x41, 0x42,
-        0x51, 0x42,
-        19, 0x00
-    ], data);
-}
-
-#[test]
-fn inc() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            inc $42
-            inc $42, x
-            inc $cafe
-            inc $cafe, x
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xE6, 0x42,
-        0xF6, 0x42,
-        0xEE, 0xfe, 0xca,
-        0xFE, 0xfe, 0xca,
-        10, 0x00
-    ], data);
-}
-
-#[test]
-fn inx() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            inx
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xE8,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn iny() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            iny
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xC8,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn jmp() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            jmp $cafe
-            jmp ($cafe)
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x4C, 0xfe, 0xca,
-        0x6C, 0xfe, 0xca,
-        6, 0x00
-    ], data);
-}
-
-#[test]
-fn jsr() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            jsr $cafe
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x20, 0xfe, 0xca,
-        3, 0x00
-    ], data);
-}
-
-#[test]
-fn lda() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            lda #$42
-            lda $42
-            lda $42, x
-            lda $cafe
-            lda $cafe, x
-            lda $cafe, y
-            lda ($42, x)
-            lda ($42), y
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xA9, 0x42,
-        0xA5, 0x42,
-        0xB5, 0x42,
-        0xAD, 0xfe, 0xca,
-        0xBD, 0xfe, 0xca,
-        0xB9, 0xfe, 0xca,
-        0xA1, 0x42,
-        0xB1, 0x42,
-        19, 0x00
-    ], data);
-}
-
-#[test]
-fn ldx() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            ldx #$42
-            ldx $42
-            ldx $42, y
-            ldx $cafe
-            ldx $cafe, y
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xA2, 0x42,
-        0xA6, 0x42,
-        0xB6, 0x42,
-        0xAE, 0xfe, 0xca,
-        0xBE, 0xfe, 0xca,
-        12, 0x00
-    ], data);
-}
-
-#[test]
-fn ldy() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            ldy #$42
-            ldy $42
-            ldy $42, x
-            ldy $cafe
-            ldy $cafe, x
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xA0, 0x42,
-        0xA4, 0x42,
-        0xB4, 0x42,
-        0xAC, 0xfe, 0xca,
-        0xBC, 0xfe, 0xca,
-        12, 0x00
-    ], data);
-}
-
-#[test]
-fn lsr() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            lsr a
-            lsr $42
-            lsr $42, x
-            lsr $cafe
-            lsr $cafe, x
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x4A,
-        0x46, 0x42,
-        0x56, 0x42,
-        0x4E, 0xfe, 0xca,
-        0x5E, 0xfe, 0xca,
-        11, 0x00
-    ], data);
-}
-
-#[test]
-fn ora() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            ora #$42
-            ora $42
-            ora $42, x
-            ora $cafe
-            ora $cafe, x
-            ora $cafe, y
-            ora ($42, x)
-            ora ($42), y
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x09, 0x42,
-        0x05, 0x42,
-        0x15, 0x42,
-        0x0D, 0xfe, 0xca,
-        0x1D, 0xfe, 0xca,
-        0x19, 0xfe, 0xca,
-        0x01, 0x42,
-        0x11, 0x42,
-        19, 0x00
-    ], data);
-}
-
-#[test]
-fn pha() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            pha
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x48,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn php() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            php
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x08,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn pla() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            pla
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x68,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn plp() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            plp
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x28,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn rol() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            rol a
-            rol $42
-            rol $42, x
-            rol $cafe
-            rol $cafe, x
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x2A,
-        0x26, 0x42,
-        0x36, 0x42,
-        0x2E, 0xfe, 0xca,
-        0x3E, 0xfe, 0xca,
-        11, 0x00
-    ], data);
-}
-
-#[test]
-fn ror() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            ror a
-            ror $42
-            ror $42, x
-            ror $cafe
-            ror $cafe, x
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x6A,
-        0x66, 0x42,
-        0x76, 0x42,
-        0x6E, 0xfe, 0xca,
-        0x7E, 0xfe, 0xca,
-        11, 0x00
-    ], data);
-}
-
-#[test]
-fn rti() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            rti
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x40,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn rts() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            rts
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x60,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn sbc() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            sbc #$42
-            sbc $42
-            sbc $42, x
-            sbc $cafe
-            sbc $cafe, x
-            sbc $cafe, y
-            sbc ($42, x)
-            sbc ($42), y
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xE9, 0x42,
-        0xE5, 0x42,
-        0xF5, 0x42,
-        0xED, 0xfe, 0xca,
-        0xFD, 0xfe, 0xca,
-        0xF9, 0xfe, 0xca,
-        0xE1, 0x42,
-        0xF1, 0x42,
-        19, 0x00
-    ], data);
-}
-
-#[test]
-fn sec() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            sec
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x38,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn sed() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            sed
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xF8,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn sei() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            sei
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x78,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn sta() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            sta $42
-            sta $42, x
-            sta $cafe
-            sta $cafe, x
-            sta $cafe, y
-            sta ($42, x)
-            sta ($42), y
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x85, 0x42,
-        0x95, 0x42,
-        0x8D, 0xfe, 0xca,
-        0x9D, 0xfe, 0xca,
-        0x99, 0xfe, 0xca,
-        0x81, 0x42,
-        0x91, 0x42,
-        17, 0x00
-    ], data);
-}
-
-#[test]
-fn stx() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            stx $42
-            stx $42, y
-            stx $cafe
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x86, 0x42,
-        0x96, 0x42,
-        0x8E, 0xfe, 0xca,
-        7, 0x00
-    ], data);
-}
-
-#[test]
-fn sty() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            sty $42
-            sty $42, x
-            sty $cafe
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x84, 0x42,
-        0x94, 0x42,
-        0x8C, 0xfe, 0xca,
-        7, 0x00
-    ], data);
-}
-
-#[test]
-fn tax() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            tax
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xAA,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn tay() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            tay
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xA8,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn tsx() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            tsx
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0xBA,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn txa() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            txa
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x8A,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn txs() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            txs
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x9A,
-        1, 0x00
-    ], data);
-}
-
-#[test]
-fn tya() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            tya
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x98,
-        1, 0x00
-    ], data);
+fn assembler<P: AsRef<Path>>(
+    files: &[(P, &str)],
+) -> Assembler<StringFileSystem, Cursor<String>, TestArchTokens, TestArchAssembler> {
+    Assembler::new(StringFileSystem::new(files), TestArchAssembler)
 }
 
 #[test]
@@ -1623,7 +127,7 @@ fn macros1() {
                 nop
                 @dw @here
             @endmacro
-            
+
             test
         "#,
     )]);
@@ -1637,9 +141,9 @@ fn macros1() {
 
     #[rustfmt::skip]
     assert_eq!(vec![
-        0xEA,
-        0xEA,
-        0xEA,
+        0x00,
+        0x00,
+        0x00,
         3, 0x00
     ], data);
 }
@@ -1655,7 +159,7 @@ fn macros2() {
                 nop
                 @dw @here
             @endmacro
-            
+
             test flop
         "#,
     )]);
@@ -1669,8 +173,8 @@ fn macros2() {
 
     #[rustfmt::skip]
     assert_eq!(vec![
-        0xEA,
-        0xEA,
+        0x00,
+        0x00,
         2, 0x00
     ], data);
 }
@@ -1688,8 +192,8 @@ fn macros3() {
                 nop
                 @dw @here
             @endmacro
-            
-            test txs, tay
+
+            test nop, nop
         "#,
     )]);
 
@@ -1702,11 +206,11 @@ fn macros3() {
 
     #[rustfmt::skip]
     assert_eq!(vec![
-        0xEA,
-        0x9A,
-        0x9A,
-        0xA8,
-        0xEA,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
         5, 0x00
     ], data);
 }
@@ -1722,8 +226,8 @@ fn macros4() {
                 nop
                 @dw @here
             @endmacro
-            
-            test {tay tay tay}
+
+            test {nop nop nop}
         "#,
     )]);
 
@@ -1736,11 +240,11 @@ fn macros4() {
 
     #[rustfmt::skip]
     assert_eq!(vec![
-        0xEA,
-        0xA8,
-        0xA8,
-        0xA8,
-        0xEA,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
         5, 0x00
     ], data);
 }
@@ -1753,14 +257,14 @@ fn macros5() {
             @macro test1, 1
                 @1
             @endmacro
-        
+
             @macro test2, 0
                 nop
                 test1 nop
                 nop
                 @dw @here
             @endmacro
-            
+
             test2
         "#,
     )]);
@@ -1774,9 +278,9 @@ fn macros5() {
 
     #[rustfmt::skip]
     assert_eq!(vec![
-        0xEA,
-        0xEA,
-        0xEA,
+        0x00,
+        0x00,
+        0x00,
         3, 0x00
     ], data);
 }
@@ -1790,12 +294,12 @@ fn macros6() {
                 @@macro test1, 1
                     @@1
                 @@endmacro
-                
+
                 nop
-                test1 tay
+                test1 nop
                 nop
             @endmacro
-            
+
             test2
             test1 nop
             @dw @here
@@ -1811,10 +315,10 @@ fn macros6() {
 
     #[rustfmt::skip]
     assert_eq!(vec![
-        0xEA,
-        0xA8,
-        0xEA,
-        0xEA,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
         4, 0x00
     ], data);
 }
@@ -1827,7 +331,7 @@ fn macros7() {
             @macro ASSERT_EQ, 2
                 @assert @1 == @2
             @endmacro
-            
+
             ASSERT_EQ 4, { 2 + 2 }
         "#,
     )]);
@@ -1846,7 +350,7 @@ fn structs1() {
         "/test.asm",
         r#"
             @assert MyStruct.field3 == 6
-            
+
             @struct MyStruct
                 field1 2
                 field2 1
@@ -1870,7 +374,7 @@ fn structs2() {
         "/test.asm",
         r#"
             @assert MyStruct.field3 == 8 && MyStruct.field4 == 16
-            
+
             @struct MyStruct
                 field1 2
                 field2 1
@@ -1897,11 +401,11 @@ fn align() {
         r#"
             @org $0000
             nop
-            
+
             @align $1000
             @assert @here == $1000
             nop
-            
+
             @align $1000
             @assert @here == $2000
         "#,
@@ -1921,11 +425,11 @@ fn stringify_and_labelify() {
         "/test.asm",
         r#"
             @echo @string test
-            
+
             @echo @string { 1 " " 2 "hello" 2 + 2 }
-            
+
             @label "test"
-            
+
             @defl @label { global "." @string { the "_" local } }, 42
             @assert global.the_local == 42
         "#,
@@ -1976,7 +480,7 @@ fn each() {
                     @db >(@@1)
                 @@endeach
             @endmacro
-            
+
             @defl First, $1234
             @defl Second, $5678
             @defl Third, $9abc
@@ -2014,19 +518,19 @@ fn control_flow() {
         r#"
            @each { @count !@isdef STDMACROS_INC }
                @@defn STDMACROS_INC, 0
-               
+
                @@macro REPEAT, 2
                    @@@each { @@@count (@@1) }
                        @@2
                    @@@endeach
                @@endmacro
-               
+
                @@macro IF, 2
                    @@@each { @@@count (@@1) != 0 }
                        @@2
                    @@@endeach
                @@endmacro
-               
+
                @@macro IF_ELSE, 3
                    @@@each { @@@count (@@1) != 0 }
                        @@2
@@ -2035,7 +539,7 @@ fn control_flow() {
                        @@3
                    @@@endeach
                @@endmacro
-               
+
                @@macro ONCE, 2
                    @@@each { @@@count !@@@isdef @@1 }
                        @@@defn @@1, 0
@@ -2047,21 +551,21 @@ fn control_flow() {
            REPEAT 3, {
                nop
            }
-           
+
            IF { !@isdef Test }, {
                @echo "not defined"
            }
-           
+
            @assert !@isdef Test
            @defn Test, 2
            @assert @isdef Test
-           
+
            IF_ELSE { !@isdef Test }, {
                @echo "not defined"
            }, {
                @echo "defined"
            }
-           
+
            ONCE _tok, { }
            ONCE _tok, { @die "impossible" }
         "#,
@@ -2076,9 +580,9 @@ fn control_flow() {
 
     #[rustfmt::skip]
     assert_eq!(vec![
-        0xEA,
-        0xEA,
-        0xEA,
+        0x00,
+        0x00,
+        0x00,
     ], data);
 }
 
@@ -2101,8 +605,8 @@ fn parse() {
 
     #[rustfmt::skip]
     assert_eq!(vec![
-        0xEA,
-        0xEA,
+        0x00,
+        0x00,
     ], data);
 }
 
@@ -2114,12 +618,12 @@ fn metaget() {
            @meta "BANK" "33"
            mylabel:
                nop
-           
+
            @macro BANK_OF, 1
-               @@parse @@string { "#$" @@metaget @1, "BANK" }
+               @@parse @@string { "$" @@metaget @1, "BANK" }
            @endmacro
-           
-           lda BANK_OF mylabel
+
+           @db BANK_OF mylabel
         "##,
     )]);
 
@@ -2132,7 +636,7 @@ fn metaget() {
 
     #[rustfmt::skip]
     assert_eq!(vec![
-        0xEA,
-        0xA9, 0x33
+        0x00,
+        0x33
     ], data);
 }
