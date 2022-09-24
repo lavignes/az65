@@ -111,8 +111,8 @@ impl<R: Read, A: ArchTokens> TokenSource<R, A> {
                         MacroToken::Uniq(loc) => {
                             state.macro_offset += 1;
                             state.loc = loc;
-                            let value = state.uniq as u32;
-                            state.uniq += 1;
+                            let value = state.entropy as u32;
+                            state.entropy += 1;
                             return Some(Ok(Token::Number { loc, value }));
                         }
                     }
@@ -153,7 +153,7 @@ struct MacroState<A: ArchTokens> {
     expanding_macro_arg: Option<usize>,
     macro_arg_offset: usize,
     loc: SourceLoc,
-    uniq: usize,
+    entropy: usize,
     included_from: Option<SourceLoc>,
     str_interner: Rc<RefCell<StrInterner>>,
 }
@@ -176,7 +176,7 @@ pub struct Assembler<S, R, A: ArchTokens, Z> {
     seg_mode: SegmentMode,
     pub(crate) links: Vec<Link>,
 
-    uniq: usize,
+    entropy: usize,
     stash: Option<Token<A>>,
     loc: Option<SourceLoc>,
     pub(crate) here: u32,
@@ -216,7 +216,7 @@ where
             seg_mode: SegmentMode::Code,
             links: Vec::new(),
 
-            uniq: 0,
+            entropy: 0,
             stash: None,
             loc: None,
             here: 0,
@@ -439,8 +439,8 @@ where
                                 let name = self
                                     .str_interner
                                     .borrow_mut()
-                                    .intern(format!("@metaget Invocation{}", self.uniq));
-                                self.uniq += 1;
+                                    .intern(format!("@metaget Invocation{}", self.entropy));
+                                self.entropy += 1;
                                 self.macros.insert(
                                     name,
                                     Macro {
@@ -453,8 +453,8 @@ where
                                 self.token_sources.push(self.token_source.take().unwrap());
                                 self.cwds.push(self.cwd.unwrap());
 
-                                let uniq = self.uniq;
-                                self.uniq += 1;
+                                let entropy = self.entropy;
+                                self.entropy += 1;
                                 self.token_sources.push(TokenSource::Macro(MacroState {
                                     name,
                                     args: Vec::new(),
@@ -462,7 +462,7 @@ where
                                     expanding_macro_arg: None,
                                     macro_arg_offset: 0,
                                     loc,
-                                    uniq,
+                                    entropy,
                                     included_from: Some(loc),
                                     str_interner: self.str_interner.clone(),
                                 }));
@@ -807,8 +807,8 @@ where
             }
         }
 
-        let uniq = self.uniq;
-        self.uniq += 1;
+        let entropy = self.entropy;
+        self.entropy += 1;
         Ok(MacroState {
             name,
             args,
@@ -816,7 +816,7 @@ where
             expanding_macro_arg: None,
             macro_arg_offset: 0,
             loc,
-            uniq,
+            entropy,
             included_from: Some(loc),
             str_interner: self.str_interner.clone(),
         })
@@ -918,8 +918,8 @@ where
         };
 
         let mut interner = self.str_interner.borrow_mut();
-        let name = interner.intern(format!("{directive_name} Invocation{}", self.uniq));
-        self.uniq += 1;
+        let name = interner.intern(format!("{directive_name} Invocation{}", self.entropy));
+        self.entropy += 1;
         let value = match base {
             2 => interner.intern(format!("{value:b}")),
             16 => interner.intern(format!("{value:x}")),
@@ -946,8 +946,8 @@ where
             },
         );
 
-        let uniq = self.uniq;
-        self.uniq += 1;
+        let entropy = self.entropy;
+        self.entropy += 1;
         Ok(MacroState {
             name,
             args: Vec::new(),
@@ -955,7 +955,7 @@ where
             expanding_macro_arg: None,
             macro_arg_offset: 0,
             loc,
-            uniq,
+            entropy,
             included_from: Some(loc),
             str_interner: self.str_interner.clone(),
         })
@@ -986,8 +986,8 @@ where
         let name = self
             .str_interner
             .borrow_mut()
-            .intern(format!("@count Invocation{}", self.uniq));
-        self.uniq += 1;
+            .intern(format!("@count Invocation{}", self.entropy));
+        self.entropy += 1;
         let mut toks = Vec::new();
         for i in 0..count {
             toks.push(MacroToken::Token(Token::Number {
@@ -1014,8 +1014,8 @@ where
             },
         );
 
-        let uniq = self.uniq;
-        self.uniq += 1;
+        let entropy = self.entropy;
+        self.entropy += 1;
         Ok(MacroState {
             name,
             args: Vec::new(),
@@ -1023,7 +1023,7 @@ where
             expanding_macro_arg: None,
             macro_arg_offset: 0,
             loc,
-            uniq,
+            entropy,
             included_from: Some(loc),
             str_interner: self.str_interner.clone(),
         })
@@ -1180,8 +1180,8 @@ where
         let name = self
             .str_interner
             .borrow_mut()
-            .intern(format!("@each Invocation{}", self.uniq));
-        self.uniq += 1;
+            .intern(format!("@each Invocation{}", self.entropy));
+        self.entropy += 1;
         let mut toks = Vec::new();
         loop {
             match self.next()? {
@@ -1246,8 +1246,8 @@ where
 
         let mut states = Vec::new();
         for arg in args {
-            let uniq = self.uniq;
-            self.uniq += 1;
+            let entropy = self.entropy;
+            self.entropy += 1;
             states.push(MacroState {
                 name,
                 args: vec![vec![arg]],
@@ -1255,7 +1255,7 @@ where
                 expanding_macro_arg: None,
                 macro_arg_offset: 0,
                 loc,
-                uniq,
+                entropy,
                 included_from: Some(loc),
                 str_interner: self.str_interner.clone(),
             })
@@ -2763,7 +2763,7 @@ where
                     if let SegmentMode::Addr = self.seg_mode {
                         return asm_err!(
                             self.loc(),
-                            "Cannot place instructions in an \"ADDR\" segment.",
+                            "Cannot place instructions in an \"ADDR\" segment",
                         );
                     }
 
