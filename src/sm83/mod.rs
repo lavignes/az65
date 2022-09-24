@@ -758,6 +758,168 @@ where
                         }
                     }
 
+                    Some(Token::Register {
+                        name: RegisterName::C,
+                        ..
+                    }) => {
+                        asm.expect_symbol(SymbolName::Comma)?;
+                        match asm.peek()? {
+                            None => return asm.end_of_input_err(),
+
+                            Some(Token::Register {
+                                name: RegisterName::A,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x4F);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::B,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x48);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::C,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x49);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::D,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x4A);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::E,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x4B);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::H,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x4C);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::L,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x4D);
+                            }
+
+                            Some(Token::Symbol {
+                                name: SymbolName::ParenOpen,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.expect_register(RegisterName::HL)?;
+                                asm.expect_symbol(SymbolName::ParenClose)?;
+                                asm.data.push(0x4E);
+                            }
+
+                            Some(_) => {
+                                asm.data.push(0x0E);
+                                asm.expect_immediate()?;
+                            }
+                        }
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::D,
+                        ..
+                    }) => {
+                        asm.expect_symbol(SymbolName::Comma)?;
+                        match asm.peek()? {
+                            None => return asm.end_of_input_err(),
+
+                            Some(Token::Register {
+                                name: RegisterName::A,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x57);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::B,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x50);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::C,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x51);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::D,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x52);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::E,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x53);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::H,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x54);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::L,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x55);
+                            }
+
+                            Some(Token::Symbol {
+                                name: SymbolName::ParenOpen,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.expect_register(RegisterName::HL)?;
+                                asm.expect_symbol(SymbolName::ParenClose)?;
+                                asm.data.push(0x56);
+                            }
+
+                            Some(_) => {
+                                asm.data.push(0x16);
+                                asm.expect_immediate()?;
+                            }
+                        }
+                    }
+
                     Some(tok) => {
                         return asm_err!(
                         tok.loc(),

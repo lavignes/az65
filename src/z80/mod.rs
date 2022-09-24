@@ -636,11 +636,13 @@ where
                                 asm.data.push(0x7A);
                             }
 
-                            Some(tok) => return asm_err!(
+                            Some(tok) => {
+                                return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected register \"bc\", \"de\", \"hl\" or \"sp\"",
                                 tok.as_display(&asm.str_interner)
-                            ),
+                            )
+                            }
                         }
                     }
 
@@ -884,11 +886,13 @@ where
                                 asm.data.push(0x39);
                             }
 
-                            Some(tok) => return asm_err!(
+                            Some(tok) => {
+                                return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected register \"bc\", \"de\", \"hl\" or \"sp\"",
                                 tok.as_display(&asm.str_interner)
-                            ),
+                            )
+                            }
                         }
                     }
 
@@ -931,11 +935,13 @@ where
                                 asm.data.push(0x39);
                             }
 
-                            Some(tok) => return asm_err!(
+                            Some(tok) => {
+                                return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected register \"bc\", \"de\", \"ix\" or \"sp\"",
                                 tok.as_display(&asm.str_interner)
-                            ),
+                            )
+                            }
                         }
                     }
 
@@ -978,11 +984,13 @@ where
                                 asm.data.push(0x39);
                             }
 
-                            Some(tok) => return asm_err!(
+                            Some(tok) => {
+                                return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected register \"bc\", \"de\", \"iy\" or \"sp\"",
                                 tok.as_display(&asm.str_interner)
-                            ),
+                            )
+                            }
                         }
                     }
 
@@ -2026,11 +2034,13 @@ where
                                 asm.data.push(0xE3);
                             }
 
-                            Some(tok) => return asm_err!(
+                            Some(tok) => {
+                                return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected the registers \"hl\", \"ix\", or \"iy\"",
                                 tok.as_display(&asm.str_interner)
-                            ),
+                            )
+                            }
                         }
                     }
 
@@ -6120,11 +6130,13 @@ where
                                 asm.data.push(0x72);
                             }
 
-                            Some(tok) => return asm_err!(
+                            Some(tok) => {
+                                return asm_err!(
                                 tok.loc(),
                                 "Unexpected {}, expected register \"bc\", \"de\", \"hl\" or \"sp\"",
                                 tok.as_display(&asm.str_interner)
-                            ),
+                            )
+                            }
                         }
                     }
 
