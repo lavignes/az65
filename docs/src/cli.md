@@ -24,7 +24,7 @@ this to a file using the `>` operator:
 az65 6502 code.asm > code.bin
 ```
 
-You can alternative use the `-o` option to pick an output file:
+You can alternatively use the `-o` option to pick an output file:
 
 ```sh
 az65 z80 code.asm -o code.bin
