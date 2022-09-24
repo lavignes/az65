@@ -305,3 +305,43 @@ fn ld_a() {
         18, 0x00
     ], data);
 }
+
+#[test]
+fn ld_b() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            ld b, a
+            ld b, b
+            ld b, c
+            ld b, d
+            ld b, e
+            ld b, h
+            ld b, l
+            ld b, (hl)
+            ld b, $42
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0x47,
+        0x40,
+        0x41,
+        0x42,
+        0x43,
+        0x44,
+        0x45,
+        0x46,
+        0x06, 0x42,
+        10, 0x00
+    ], data);
+}

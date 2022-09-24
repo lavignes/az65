@@ -677,6 +677,87 @@ where
                         }
                     },
 
+                    Some(Token::Register {
+                        name: RegisterName::B,
+                        ..
+                    }) => {
+                        asm.expect_symbol(SymbolName::Comma)?;
+                        match asm.peek()? {
+                            None => return asm.end_of_input_err(),
+
+                            Some(Token::Register {
+                                name: RegisterName::A,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x47);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::B,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x40);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::C,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x41);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::D,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x42);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::E,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x43);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::H,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x44);
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::L,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.data.push(0x45);
+                            }
+
+                            Some(Token::Symbol {
+                                name: SymbolName::ParenOpen,
+                                ..
+                            }) => {
+                                asm.next()?;
+                                asm.expect_register(RegisterName::HL)?;
+                                asm.expect_symbol(SymbolName::ParenClose)?;
+                                asm.data.push(0x46);
+                            }
+
+                            Some(_) => {
+                                asm.data.push(0x06);
+                                asm.expect_immediate()?;
+                            }
+                        }
+                    }
+
                     Some(tok) => {
                         return asm_err!(
                         tok.loc(),
