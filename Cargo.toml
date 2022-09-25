@@ -1,7 +1,13 @@
 [package]
 name = "az65"
+description = "A multi-CPU assembler"
 version = "0.1.0"
 edition = "2021"
+authors = ["Scott LaVigne <lavignes@amazon.com>"]
+documentation = "https://lavignes.github.io/az65/"
+homepage = "https://github.com/lavignes/az65"
+repository = "https://github.com/lavignes/az65"
+license = "Apache-2.0"
 
 [dependencies]
 microserde = "0.1"
