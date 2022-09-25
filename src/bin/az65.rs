@@ -7,8 +7,12 @@ use std::{
 };
 
 use az65::{
-    assembler::Assembler, fileman::RealFileSystem, linker::DebugExporter, mos6502::Mos6502,
-    namelist::NameList, sm83::Sm83, z80::Z80,
+    assembler::Assembler,
+    fileman::RealFileSystem,
+    linker::DebugExporter,
+    mos6502::{Mos6502, NameList},
+    sm83::Sm83,
+    z80::Z80,
 };
 use clap::{Parser, Subcommand};
 
@@ -33,13 +37,14 @@ struct Args {
 
 #[derive(Debug, Subcommand)]
 enum Arch {
+    /// MOS 6502 assembler
     #[clap(name = "6502")]
     Mos6502 {
         /// Path to input assembly file
         #[clap(parse(from_os_str), value_name = "FILE")]
         file: PathBuf,
 
-        /// Base path and filename to output FCEUX "NameList" files
+        /// Base path and filename to output FCEUX (NES Emulator) "NameList" files
         ///
         /// For example, passing `-gNL path/myrom.nes` can generate files such as:
         /// * `path/myrom.nes.ram.nl`
@@ -53,12 +58,14 @@ enum Arch {
         g_nl: Option<PathBuf>,
     },
 
+    /// Zilog Z80 assembler
     Z80 {
         /// Path to input assembly file
         #[clap(parse(from_os_str), value_name = "FILE")]
         file: PathBuf,
     },
 
+    /// SM83 / GameBoy Z80 assembler
     Sm83 {
         /// Path to input assembly file
         #[clap(parse(from_os_str), value_name = "FILE")]

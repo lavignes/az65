@@ -13,6 +13,10 @@ use crate::{
 #[cfg(test)]
 mod tests;
 
+mod namelist;
+
+pub use namelist::*;
+
 macro_rules! asm_err {
     ($loc:expr, $($arg:tt)*) => {
         Err(($loc, AssemblerError(format!($($arg)*))))
