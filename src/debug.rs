@@ -1,18 +1,36 @@
-use std::{
-    cell::Ref,
-    io::{Read, Write},
-    marker::PhantomData,
-    path::Path,
-};
+use std::{cell::Ref, io::Write, marker::PhantomData, path::Path};
 
 use fxhash::FxHashMap;
 
 use crate::{
     fileman::{FileManager, FileSystem},
     intern::StrInterner,
-    linker::{DebugExporter, DebugExporterError},
     symtab::{Symbol, Symtab},
 };
+
+#[derive(thiserror::Error, Debug)]
+#[error("{0}")]
+pub struct DebugExporterError(String);
+
+impl DebugExporterError {
+    #[inline]
+    pub fn new(msg: String) -> Self {
+        Self(msg)
+    }
+}
+
+pub trait DebugExporter {
+    type FileSystem: FileSystem;
+
+    fn export(
+        &mut self,
+        file_manager: &mut FileManager<Self::FileSystem>,
+        str_interner: Ref<StrInterner>,
+        symtab: &Symtab,
+        cwd: &Path,
+        path: &Path,
+    ) -> Result<(), DebugExporterError>;
+}
 
 pub struct AZ65Meta<S> {
     marker: PhantomData<S>,
@@ -34,11 +52,9 @@ struct DebugSymbol {
     meta: FxHashMap<String, String>,
 }
 
-impl<S, R, W> DebugExporter for AZ65Meta<S>
+impl<S> DebugExporter for AZ65Meta<S>
 where
-    S: FileSystem<Reader = R, Writer = W>,
-    R: Read,
-    W: Write,
+    S: FileSystem,
 {
     type FileSystem = S;
 

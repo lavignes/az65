@@ -1,16 +1,11 @@
-use std::{
-    cell::Ref,
-    io::{Read, Write},
-    marker::PhantomData,
-    path::Path,
-};
+use std::{cell::Ref, io::Write, marker::PhantomData, path::Path};
 
 use fxhash::FxHashMap;
 
 use crate::{
+    debug::{DebugExporter, DebugExporterError},
     fileman::{FileManager, FileSystem},
     intern::StrInterner,
-    linker::{DebugExporter, DebugExporterError},
     symtab::{Symbol, Symtab},
 };
 
@@ -27,11 +22,9 @@ impl<S> NameList<S> {
     }
 }
 
-impl<S, R, W> DebugExporter for NameList<S>
+impl<S> DebugExporter for NameList<S>
 where
-    S: FileSystem<Reader = R, Writer = W>,
-    R: Read,
-    W: Write,
+    S: FileSystem,
 {
     type FileSystem = S;
 

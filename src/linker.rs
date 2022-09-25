@@ -1,9 +1,4 @@
-use std::{
-    cell::{Ref, RefCell},
-    io::Write,
-    path::Path,
-    rc::Rc,
-};
+use std::{cell::RefCell, io::Write, rc::Rc};
 
 use crate::{
     expr::Expr,
@@ -12,30 +7,6 @@ use crate::{
     lexer::SourceLoc,
     symtab::{Symbol, Symtab},
 };
-
-#[derive(thiserror::Error, Debug)]
-#[error("{0}")]
-pub struct DebugExporterError(String);
-
-impl DebugExporterError {
-    #[inline]
-    pub fn new(msg: String) -> Self {
-        Self(msg)
-    }
-}
-
-pub trait DebugExporter {
-    type FileSystem: FileSystem;
-
-    fn export(
-        &mut self,
-        file_manager: &mut FileManager<Self::FileSystem>,
-        str_interner: Ref<StrInterner>,
-        symtab: &Symtab,
-        cwd: &Path,
-        path: &Path,
-    ) -> Result<(), DebugExporterError>;
-}
 
 #[derive(thiserror::Error, Debug)]
 #[error("{0}")]

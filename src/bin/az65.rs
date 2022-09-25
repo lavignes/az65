@@ -8,9 +8,8 @@ use std::{
 
 use az65::{
     assembler::Assembler,
-    debug::AZ65Meta,
+    debug::{AZ65Meta, DebugExporter},
     fileman::RealFileSystem,
-    linker::DebugExporter,
     mos6502::{Mos6502, NameList},
     sm83::Sm83,
     z80::Z80,
