@@ -308,7 +308,7 @@ where
                         let tok = token_source.next(&mut self.macros).transpose()?;
                         // Note: we intentionally do not skip newlines and comments.
                         // we want to pass them on to expression parsing! They act as an
-                        // "epsilon" token to terminate the non-terminal expression!
+                        // "epsilon" token to terminate a non-terminal expression!
                         // TODO: Need to add a way to do multi-line expressions?
 
                         // if we arent currently defining a macro
@@ -1282,22 +1282,25 @@ where
     ) -> Result<SourceLoc, (SourceLoc, AssemblerError)> {
         let loc = self.expr_prec_1(nodes)?;
 
-        match self.peek()? {
-            Some(Token::Symbol {
-                name: SymbolName::Question,
-                ..
-            }) => {
-                self.next()?;
-                self.expr_prec_1(nodes)?;
-                if self.peeked_symbol(SymbolName::Colon)?.is_none() {
-                    return asm_err!(self.loc(), "Expected a \":\" in ternary expression");
+        loop {
+            match self.peek()? {
+                Some(Token::Symbol {
+                    name: SymbolName::Question,
+                    ..
+                }) => {
+                    self.next()?;
+                    self.expr_prec_1(nodes)?;
+                    if self.peeked_symbol(SymbolName::Colon)?.is_none() {
+                        return asm_err!(self.loc(), "Expected a \":\" in ternary expression");
+                    }
+                    self.next()?;
+                    self.expr_prec_1(nodes)?;
+                    nodes.push(ExprNode::Ternary);
+                    return Ok(loc);
                 }
-                self.next()?;
-                self.expr_prec_1(nodes)?;
-                nodes.push(ExprNode::Ternary);
-                Ok(loc)
+
+                _ => return Ok(loc),
             }
-            _ => Ok(loc),
         }
     }
 
@@ -1595,136 +1598,131 @@ where
         &mut self,
         nodes: &mut Vec<ExprNode>,
     ) -> Result<SourceLoc, (SourceLoc, AssemblerError)> {
-        match self.peek()? {
-            Some(Token::Symbol {
-                loc,
-                name: SymbolName::Minus,
-            }) => {
-                self.next()?;
-                self.expr_prec_11(nodes)?;
-                nodes.push(ExprNode::Neg);
-                Ok(loc)
-            }
-
-            Some(Token::Symbol {
-                loc,
-                name: SymbolName::Bang,
-            }) => {
-                self.next()?;
-                self.expr_prec_11(nodes)?;
-                nodes.push(ExprNode::NotLogical);
-                Ok(loc)
-            }
-
-            Some(Token::Symbol {
-                loc,
-                name: SymbolName::Tilde,
-            }) => {
-                self.next()?;
-                self.expr_prec_11(nodes)?;
-                nodes.push(ExprNode::Invert);
-                Ok(loc)
-            }
-
-            Some(Token::Symbol {
-                loc,
-                name: SymbolName::LessThan,
-            }) => {
-                self.next()?;
-                self.expr_prec_11(nodes)?;
-                nodes.push(ExprNode::Lo);
-                Ok(loc)
-            }
-
-            Some(Token::Symbol {
-                loc,
-                name: SymbolName::GreaterThan,
-            }) => {
-                self.next()?;
-                self.expr_prec_11(nodes)?;
-                nodes.push(ExprNode::Hi);
-                Ok(loc)
-            }
-
-            Some(Token::Symbol {
-                loc,
-                name: SymbolName::ParenOpen,
-            }) => {
-                self.next()?;
-                self.expr_prec_0(nodes)?;
-                if self.peeked_symbol(SymbolName::ParenClose)?.is_none() {
-                    return asm_err!(self.loc(), "Expected a \")\" to close expression");
-                }
-                self.next()?;
-                Ok(loc)
-            }
-
-            Some(Token::Number { loc, value }) => {
-                self.next()?;
-                nodes.push(ExprNode::Value(value as i32));
-                Ok(loc)
-            }
-
-            Some(Token::Directive { loc, name }) => match name {
-                DirectiveName::Here => {
+        loop {
+            match self.peek()? {
+                None => return self.end_of_input_err(),
+                Some(Token::Symbol {
+                    loc,
+                    name: SymbolName::Minus,
+                }) => {
                     self.next()?;
-                    nodes.push(ExprNode::Value(self.here as i32));
-                    Ok(loc)
+                    self.expr_prec_11(nodes)?;
+                    nodes.push(ExprNode::Neg);
+                    return Ok(loc);
                 }
-                _ => asm_err!(loc, "\"{name}\" directives are allowed in expressions"),
-            },
+                Some(Token::Symbol {
+                    loc,
+                    name: SymbolName::Bang,
+                }) => {
+                    self.next()?;
+                    self.expr_prec_11(nodes)?;
+                    nodes.push(ExprNode::NotLogical);
+                    return Ok(loc);
+                }
+                Some(Token::Symbol {
+                    loc,
+                    name: SymbolName::Tilde,
+                }) => {
+                    self.next()?;
+                    self.expr_prec_11(nodes)?;
+                    nodes.push(ExprNode::Invert);
+                    return Ok(loc);
+                }
+                Some(Token::Symbol {
+                    loc,
+                    name: SymbolName::LessThan,
+                }) => {
+                    self.next()?;
+                    self.expr_prec_11(nodes)?;
+                    nodes.push(ExprNode::Lo);
+                    return Ok(loc);
+                }
+                Some(Token::Symbol {
+                    loc,
+                    name: SymbolName::GreaterThan,
+                }) => {
+                    self.next()?;
+                    self.expr_prec_11(nodes)?;
+                    nodes.push(ExprNode::Hi);
+                    return Ok(loc);
+                }
+                Some(Token::Symbol {
+                    loc,
+                    name: SymbolName::ParenOpen,
+                }) => {
+                    self.next()?;
+                    self.expr_prec_0(nodes)?;
+                    if self.peeked_symbol(SymbolName::ParenClose)?.is_none() {
+                        return asm_err!(self.loc(), "Expected a \")\" to close expression");
+                    }
+                    self.next()?;
+                    return Ok(loc);
+                }
+                Some(Token::Number { loc, value }) => {
+                    self.next()?;
+                    nodes.push(ExprNode::Value(value as i32));
+                    return Ok(loc);
+                }
+                Some(Token::Directive { loc, name }) => match name {
+                    DirectiveName::Here => {
+                        self.next()?;
+                        nodes.push(ExprNode::Value(self.here as i32));
+                        return Ok(loc);
+                    }
 
-            Some(Token::Label { loc, kind, value }) => {
-                self.next()?;
-                let direct = match kind {
-                    LabelKind::Global | LabelKind::Direct => value,
+                    _ => return asm_err!(loc, "\"{name}\" directives are allowed in expressions"),
+                },
+                Some(Token::Label { loc, kind, value }) => {
+                    self.next()?;
+                    let direct = match kind {
+                        LabelKind::Global | LabelKind::Direct => value,
 
-                    LabelKind::Local => {
-                        if let Some(namespace) = self.active_namespace {
-                            let direct_label = {
+                        LabelKind::Local => {
+                            if let Some(namespace) = self.active_namespace {
+                                let direct_label = {
+                                    let interner = self.str_interner.as_ref().borrow();
+                                    let label = interner.get(value).unwrap();
+                                    let global = interner.get(namespace).unwrap();
+                                    format!("{global}{label}")
+                                };
+                                self.str_interner.borrow_mut().intern(direct_label)
+                            } else {
                                 let interner = self.str_interner.as_ref().borrow();
                                 let label = interner.get(value).unwrap();
-                                let global = interner.get(namespace).unwrap();
-                                format!("{global}{label}")
-                            };
-                            self.str_interner.borrow_mut().intern(direct_label)
-                        } else {
-                            let interner = self.str_interner.as_ref().borrow();
-                            let label = interner.get(value).unwrap();
-                            return asm_err!(loc, "The local label \"{label}\" is being defined but there was no global label defined before it");
-                        }
-                    }
-                };
-
-                if let Some(sym) = self.symtab.get(direct) {
-                    match sym.inner() {
-                        Symbol::Value(value) => {
-                            nodes.push(ExprNode::Value(*value));
-                        }
-                        Symbol::Expr(expr) => {
-                            if let Some(value) = expr.evaluate(&self.symtab) {
-                                nodes.push(ExprNode::Value(value));
-                            } else {
-                                nodes.push(ExprNode::Label(direct));
+                                return asm_err!(loc, "The local label \"{label}\" is being defined but there was no global label defined before it");
                             }
                         }
+                    };
+
+                    if let Some(sym) = self.symtab.get(direct) {
+                        match sym.inner() {
+                            Symbol::Value(value) => {
+                                nodes.push(ExprNode::Value(*value));
+                            }
+                            Symbol::Expr(expr) => {
+                                if let Some(value) = expr.evaluate(&self.symtab) {
+                                    nodes.push(ExprNode::Value(value));
+                                } else {
+                                    nodes.push(ExprNode::Label(direct));
+                                }
+                            }
+                        }
+                    } else {
+                        nodes.push(ExprNode::Label(direct));
                     }
-                } else {
-                    nodes.push(ExprNode::Label(direct));
+                    // Important to record where in expressions we reference
+                    // symbols, so we can barf at link time
+                    self.symtab.touch(direct, loc);
+                    return Ok(loc);
                 }
-                // Important to record where in expressions we reference
-                // symbols, so we can barf at link time
-                self.symtab.touch(direct, loc);
-                Ok(loc)
+                Some(tok) => {
+                    return asm_err!(
+                        tok.loc(),
+                        "Unexpected {} in expression",
+                        tok.as_display(&self.str_interner)
+                    )
+                }
             }
-
-            Some(tok) => asm_err!(
-                tok.loc(),
-                "Unexpected {} in expression",
-                tok.as_display(&self.str_interner)
-            ),
-
-            None => self.end_of_input_err(),
         }
     }
 
