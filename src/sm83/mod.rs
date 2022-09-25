@@ -2141,7 +2141,1256 @@ where
                 }
             }
 
-            _ => unimplemented!("{name}"),
+            OperationName::Rst => {
+                asm.next()?;
+                match asm.const_expr()? {
+                    (loc, None) => return asm_err!(loc,"The expression following an \"rst\" instruction must be immediately solvable"),
+                    (loc, Some(value)) => {
+                        let byte = match value {
+                            0x00 => 0xC7,
+                            0x08 => 0xCF,
+                            0x10 => 0xD7,
+                            0x18 => 0xDF,
+                            0x20 => 0xE7,
+                            0x28 => 0xEF,
+                            0x30 => 0xF7,
+                            0x38 => 0xFF,
+                            _ => return asm_err!(loc,"The \"rst\" value ({value}) is not valid"),
+                        };
+                        asm.data.push(byte);
+                    }
+                }
+            }
+
+            OperationName::Di => {
+                asm.next()?;
+                asm.data.push(0xF3);
+            }
+
+            OperationName::Ei => {
+                asm.next()?;
+                asm.data.push(0xFB);
+            }
+
+            OperationName::Push => {
+                asm.next()?;
+                match asm.next()? {
+                    None => return asm.end_of_input_err(),
+
+                    Some(Token::Register { name: RegisterName::BC, .. }) => {
+                        asm.data.push(0xC5);
+                    }
+                    
+                    Some(Token::Register { name: RegisterName::DE, .. }) => {
+                        asm.data.push(0xD5);
+                    }
+                    
+                    Some(Token::Register { name: RegisterName::HL, .. }) => {
+                        asm.data.push(0xE5);
+                    }
+                    
+                    Some(Token::Register { name: RegisterName::AF, .. }) => {
+                        asm.data.push(0xF5);
+                    }
+
+                    Some(tok) => {
+                        return asm_err!(
+                            tok.loc(),
+                            "Unexpected {}, expected register \"bc\", \"de\", \"hl\", or \"af\"",
+                            tok.as_display(&asm.str_interner)
+                        )
+                    }
+                }
+            }
+
+            OperationName::Pop => {
+                asm.next()?;
+                match asm.next()? {
+                    None => return asm.end_of_input_err(),
+
+                    Some(Token::Register { name: RegisterName::BC, .. }) => {
+                        asm.data.push(0xC1);
+                    }
+                    
+                    Some(Token::Register { name: RegisterName::DE, .. }) => {
+                        asm.data.push(0xD1);
+                    }
+                    
+                    Some(Token::Register { name: RegisterName::HL, .. }) => {
+                        asm.data.push(0xE1);
+                    }
+                    
+                    Some(Token::Register { name: RegisterName::AF, .. }) => {
+                        asm.data.push(0xF1);
+                    }
+
+                    Some(tok) => {
+                        return asm_err!(
+                            tok.loc(),
+                            "Unexpected {}, expected register \"bc\", \"de\", \"hl\", or \"af\"",
+                            tok.as_display(&asm.str_interner)
+                        )
+                    }
+                }
+            }
+
+            OperationName::Rlc => {
+                asm.next()?;
+                match asm.next()? {
+                    None => return asm.end_of_input_err(),
+
+                    Some(Token::Register {
+                        name: RegisterName::A,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x07);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::B,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x00);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::C,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x01);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::D,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x02);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::E,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x03);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::H,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x04);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::L,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x05);
+                    }
+
+                    Some(Token::Symbol {
+                        name: SymbolName::ParenOpen,
+                        ..
+                    }) => {
+                        asm.expect_register(RegisterName::HL)?;
+                        asm.expect_symbol(SymbolName::ParenClose)?;
+                        asm.data.push(0xCB);
+                        asm.data.push(0x06);
+                    }
+
+                    Some(tok) => {
+                        return asm_err!(
+                            tok.loc(),
+                            "Unexpected {}, expected register",
+                            tok.as_display(&asm.str_interner)
+                        )
+                    }
+                }
+            }
+
+            OperationName::Rrc => {
+                asm.next()?;
+                match asm.next()? {
+                    None => return asm.end_of_input_err(),
+
+                    Some(Token::Register {
+                        name: RegisterName::A,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x0F);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::B,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x08);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::C,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x09);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::D,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x0A);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::E,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x0B);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::H,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x0C);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::L,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x0D);
+                    }
+
+                    Some(Token::Symbol {
+                        name: SymbolName::ParenOpen,
+                        ..
+                    }) => {
+                        asm.expect_register(RegisterName::HL)?;
+                        asm.expect_symbol(SymbolName::ParenClose)?;
+                        asm.data.push(0xCB);
+                        asm.data.push(0x0E);
+                    }
+
+                    Some(tok) => {
+                        return asm_err!(
+                            tok.loc(),
+                            "Unexpected {}, expected register",
+                            tok.as_display(&asm.str_interner)
+                        )
+                    }
+                }
+            }
+
+            OperationName::Rl => {
+                asm.next()?;
+                match asm.next()? {
+                    None => return asm.end_of_input_err(),
+
+                    Some(Token::Register {
+                        name: RegisterName::A,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x17);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::B,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x10);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::C,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x11);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::D,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x12);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::E,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x13);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::H,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x14);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::L,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x15);
+                    }
+
+                    Some(Token::Symbol {
+                        name: SymbolName::ParenOpen,
+                        ..
+                    }) => {
+                        asm.expect_register(RegisterName::HL)?;
+                        asm.expect_symbol(SymbolName::ParenClose)?;
+                        asm.data.push(0xCB);
+                        asm.data.push(0x16);
+                    }
+
+                    Some(tok) => {
+                        return asm_err!(
+                            tok.loc(),
+                            "Unexpected {}, expected register",
+                            tok.as_display(&asm.str_interner)
+                        )
+                    }
+                }
+            }
+
+            OperationName::Rr => {
+                asm.next()?;
+                match asm.next()? {
+                    None => return asm.end_of_input_err(),
+
+                    Some(Token::Register {
+                        name: RegisterName::A,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x1F);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::B,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x18);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::C,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x19);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::D,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x1A);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::E,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x1B);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::H,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x1C);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::L,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x1D);
+                    }
+
+                    Some(Token::Symbol {
+                        name: SymbolName::ParenOpen,
+                        ..
+                    }) => {
+                        asm.expect_register(RegisterName::HL)?;
+                        asm.expect_symbol(SymbolName::ParenClose)?;
+                        asm.data.push(0xCB);
+                        asm.data.push(0x1E);
+                    }
+
+                    Some(tok) => {
+                        return asm_err!(
+                            tok.loc(),
+                            "Unexpected {}, expected register",
+                            tok.as_display(&asm.str_interner)
+                        )
+                    }
+                }
+            }
+
+            OperationName::Sla => {
+                asm.next()?;
+                match asm.next()? {
+                    None => return asm.end_of_input_err(),
+
+                    Some(Token::Register {
+                        name: RegisterName::A,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x27);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::B,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x20);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::C,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x21);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::D,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x22);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::E,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x23);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::H,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x24);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::L,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x25);
+                    }
+
+                    Some(Token::Symbol {
+                        name: SymbolName::ParenOpen,
+                        ..
+                    }) => {
+                        asm.expect_register(RegisterName::HL)?;
+                        asm.expect_symbol(SymbolName::ParenClose)?;
+                        asm.data.push(0xCB);
+                        asm.data.push(0x26);
+                    }
+
+                    Some(tok) => {
+                        return asm_err!(
+                            tok.loc(),
+                            "Unexpected {}, expected register",
+                            tok.as_display(&asm.str_interner)
+                        )
+                    }
+                }
+            }
+
+            OperationName::Sra => {
+                asm.next()?;
+                match asm.next()? {
+                    None => return asm.end_of_input_err(),
+
+                    Some(Token::Register {
+                        name: RegisterName::A,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x2F);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::B,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x28);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::C,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x29);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::D,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x2A);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::E,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x2B);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::H,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x2C);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::L,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x2D);
+                    }
+
+                    Some(Token::Symbol {
+                        name: SymbolName::ParenOpen,
+                        ..
+                    }) => {
+                        asm.expect_register(RegisterName::HL)?;
+                        asm.expect_symbol(SymbolName::ParenClose)?;
+                        asm.data.push(0xCB);
+                        asm.data.push(0x2E);
+                    }
+
+                    Some(tok) => {
+                        return asm_err!(
+                            tok.loc(),
+                            "Unexpected {}, expected register",
+                            tok.as_display(&asm.str_interner)
+                        )
+                    }
+                }
+            }
+
+            OperationName::Swap => {
+                asm.next()?;
+                match asm.next()? {
+                    None => return asm.end_of_input_err(),
+
+                    Some(Token::Register {
+                        name: RegisterName::A,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x37);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::B,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x30);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::C,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x31);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::D,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x32);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::E,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x33);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::H,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x34);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::L,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x35);
+                    }
+
+                    Some(Token::Symbol {
+                        name: SymbolName::ParenOpen,
+                        ..
+                    }) => {
+                        asm.expect_register(RegisterName::HL)?;
+                        asm.expect_symbol(SymbolName::ParenClose)?;
+                        asm.data.push(0xCB);
+                        asm.data.push(0x36);
+                    }
+
+                    Some(tok) => {
+                        return asm_err!(
+                            tok.loc(),
+                            "Unexpected {}, expected register",
+                            tok.as_display(&asm.str_interner)
+                        )
+                    }
+                }
+            }
+
+            OperationName::Srl => {
+                asm.next()?;
+                match asm.next()? {
+                    None => return asm.end_of_input_err(),
+
+                    Some(Token::Register {
+                        name: RegisterName::A,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x3F);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::B,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x38);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::C,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x39);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::D,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x3A);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::E,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x3B);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::H,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x3C);
+                    }
+
+                    Some(Token::Register {
+                        name: RegisterName::L,
+                        ..
+                    }) => {
+                        asm.data.push(0xCB);
+                        asm.data.push(0x3D);
+                    }
+
+                    Some(Token::Symbol {
+                        name: SymbolName::ParenOpen,
+                        ..
+                    }) => {
+                        asm.expect_register(RegisterName::HL)?;
+                        asm.expect_symbol(SymbolName::ParenClose)?;
+                        asm.data.push(0xCB);
+                        asm.data.push(0x3E);
+                    }
+
+                    Some(tok) => {
+                        return asm_err!(
+                            tok.loc(),
+                            "Unexpected {}, expected register",
+                            tok.as_display(&asm.str_interner)
+                        )
+                    }
+                }
+            }
+
+            OperationName::Bit => {
+                asm.next()?;
+                match asm.const_expr()? {
+                    (loc, None) => return asm_err!(loc, "Bit index must be immediately solvable"),
+                    (loc, Some(value)) => {
+                        if !(0..=7).contains(&value) {
+                            return asm_err!(loc, "Bit index ({value}) must be between 0 and 7");
+                        }
+                        asm.expect_symbol(SymbolName::Comma)?;
+                        match asm.next()? {
+                            None => return asm.end_of_input_err(),
+                            
+                            Some(Token::Register {
+                                name: RegisterName::A,
+                                ..
+                            }) => {
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x47,
+                                    1 => 0x4F,
+                                    2 => 0x57,
+                                    3 => 0x5F,
+                                    4 => 0x67,
+                                    5 => 0x6F,
+                                    6 => 0x77,
+                                    7 => 0x7F,
+                                    _ => unreachable!(),
+                                });
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::B,
+                                ..
+                            }) => {
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x40,
+                                    1 => 0x48,
+                                    2 => 0x50,
+                                    3 => 0x58,
+                                    4 => 0x60,
+                                    5 => 0x68,
+                                    6 => 0x70,
+                                    7 => 0x78,
+                                    _ => unreachable!(),
+                                });
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::C,
+                                ..
+                            }) => {
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x41,
+                                    1 => 0x49,
+                                    2 => 0x51,
+                                    3 => 0x59,
+                                    4 => 0x61,
+                                    5 => 0x69,
+                                    6 => 0x71,
+                                    7 => 0x79,
+                                    _ => unreachable!(),
+                                });
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::D,
+                                ..
+                            }) => {
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x42,
+                                    1 => 0x4A,
+                                    2 => 0x52,
+                                    3 => 0x5A,
+                                    4 => 0x62,
+                                    5 => 0x6A,
+                                    6 => 0x72,
+                                    7 => 0x7A,
+                                    _ => unreachable!(),
+                                });
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::E,
+                                ..
+                            }) => {
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x43,
+                                    1 => 0x4B,
+                                    2 => 0x53,
+                                    3 => 0x5B,
+                                    4 => 0x63,
+                                    5 => 0x6B,
+                                    6 => 0x73,
+                                    7 => 0x7B,
+                                    _ => unreachable!(),
+                                });
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::H,
+                                ..
+                            }) => {
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x44,
+                                    1 => 0x4C,
+                                    2 => 0x54,
+                                    3 => 0x5C,
+                                    4 => 0x64,
+                                    5 => 0x6C,
+                                    6 => 0x74,
+                                    7 => 0x7C,
+                                    _ => unreachable!(),
+                                });
+                            }
+
+                            Some(Token::Register {
+                                name: RegisterName::L,
+                                ..
+                            }) => {
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x45,
+                                    1 => 0x4D,
+                                    2 => 0x55,
+                                    3 => 0x5D,
+                                    4 => 0x65,
+                                    5 => 0x6D,
+                                    6 => 0x75,
+                                    7 => 0x7D,
+                                    _ => unreachable!(),
+                                });
+                            }
+
+                            Some(Token::Symbol {
+                                name: SymbolName::ParenOpen,
+                                ..
+                            }) => {
+                                asm.expect_register(RegisterName::HL)?;
+                                asm.expect_symbol(SymbolName::ParenClose)?;
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x46,
+                                    1 => 0x4E,
+                                    2 => 0x56,
+                                    3 => 0x5E,
+                                    4 => 0x66,
+                                    5 => 0x6E,
+                                    6 => 0x76,
+                                    7 => 0x7E,
+                                    _ => unreachable!(),
+                                });
+                            }
+
+                            Some(tok) => {
+                                return asm_err!(
+                                    tok.loc(),
+                                    "Unexpected {}, expected a register",
+                                    tok.as_display(&asm.str_interner)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            OperationName::Res => {
+                asm.next()?;
+                match asm.const_expr()? {
+                    (loc, None) => return asm_err!(loc, "Bit index must be immediately solvable"),
+                    (loc, Some(value)) => {
+                        if !(0..=7).contains(&value) {
+                            return asm_err!(loc, "Bit index ({value}) must be between 0 and 7");
+                        }
+                        asm.expect_symbol(SymbolName::Comma)?;
+                        match asm.next()? {
+                            None => return asm.end_of_input_err(),
+                            
+                            Some(Token::Register {
+                                name: RegisterName::A,
+                                ..
+                            }) => {
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x87,
+                                    1 => 0x8F,
+                                    2 => 0x97,
+                                    3 => 0x9F,
+                                    4 => 0xA7,
+                                    5 => 0xAF,
+                                    6 => 0xB7,
+                                    7 => 0xBF,
+                                    _ => unreachable!(),
+                                });  
+                            }  
+  
+                            Some(Token::Register {
+                                name: RegisterName::B,
+                                ..  
+                            }) => {  
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x80,
+                                    1 => 0x88,
+                                    2 => 0x90,
+                                    3 => 0x98,
+                                    4 => 0xA0,
+                                    5 => 0xA8,
+                                    6 => 0xB0,
+                                    7 => 0xB8,
+                                    _ => unreachable!(),
+                                });  
+                            }  
+  
+                            Some(Token::Register {
+                                name: RegisterName::C,
+                                ..  
+                            }) => {  
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x81,
+                                    1 => 0x89,
+                                    2 => 0x91,
+                                    3 => 0x99,
+                                    4 => 0xA1,
+                                    5 => 0xA9,
+                                    6 => 0xB1,
+                                    7 => 0xB9,
+                                    _ => unreachable!(),
+                                });  
+                            }  
+  
+                            Some(Token::Register {
+                                name: RegisterName::D,
+                                ..  
+                            }) => {  
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x82,
+                                    1 => 0x8A,
+                                    2 => 0x92,
+                                    3 => 0x9A,
+                                    4 => 0xA2,
+                                    5 => 0xAA,
+                                    6 => 0xB2,
+                                    7 => 0xBA,
+                                    _ => unreachable!(),
+                                });  
+                            }  
+  
+                            Some(Token::Register {
+                                name: RegisterName::E,
+                                ..  
+                            }) => {  
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x83,
+                                    1 => 0x8B,
+                                    2 => 0x93,
+                                    3 => 0x9B,
+                                    4 => 0xA3,
+                                    5 => 0xAB,
+                                    6 => 0xB3,
+                                    7 => 0xBB,
+                                    _ => unreachable!(),
+                                });  
+                            }  
+  
+                            Some(Token::Register {
+                                name: RegisterName::H,
+                                ..  
+                            }) => {  
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x84,
+                                    1 => 0x8C,
+                                    2 => 0x94,
+                                    3 => 0x9C,
+                                    4 => 0xA4,
+                                    5 => 0xAC,
+                                    6 => 0xB4,
+                                    7 => 0xBC,
+                                    _ => unreachable!(),
+                                });  
+                            }  
+  
+                            Some(Token::Register {
+                                name: RegisterName::L,
+                                ..  
+                            }) => {  
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x85,
+                                    1 => 0x8D,
+                                    2 => 0x95,
+                                    3 => 0x9D,
+                                    4 => 0xA5,
+                                    5 => 0xAD,
+                                    6 => 0xB5,
+                                    7 => 0xBD,
+                                    _ => unreachable!(),
+                                });  
+                            }  
+  
+                            Some(Token::Symbol {
+                                name: SymbolName::ParenOpen,
+                                ..  
+                            }) => {  
+                                asm.expect_register(RegisterName::HL)?;
+                                asm.expect_symbol(SymbolName::ParenClose)?;
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0x86,
+                                    1 => 0x8E,
+                                    2 => 0x96,
+                                    3 => 0x9E,
+                                    4 => 0xA6,
+                                    5 => 0xAE,
+                                    6 => 0xB6,
+                                    7 => 0xBE,
+                                    _ => unreachable!(),
+                                });  
+                            }  
+  
+                            Some(tok) => {  
+                                return asm_err!(
+                                    tok.loc(),
+                                    "Unexpected {}, expected a register",
+                                    tok.as_display(&asm.str_interner)
+                                )  
+                            }  
+                        }
+                    }
+                }
+            }
+
+            OperationName::Set => {
+                asm.next()?;
+                match asm.const_expr()? {
+                    (loc, None) => return asm_err!(loc, "Bit index must be immediately solvable"),
+                    (loc, Some(value)) => {
+                        if !(0..=7).contains(&value) {
+                            return asm_err!(loc, "Bit index ({value}) must be between 0 and 7");
+                        }
+                        asm.expect_symbol(SymbolName::Comma)?;
+                        match asm.next()? {
+                            None => return asm.end_of_input_err(),
+                            
+                            Some(Token::Register {
+                                name: RegisterName::A,
+                                ..
+                            }) => {
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0xC7,
+                                    1 => 0xCF,
+                                    2 => 0xD7,
+                                    3 => 0xDF,
+                                    4 => 0xE7,
+                                    5 => 0xEF,
+                                    6 => 0xF7,
+                                    7 => 0xFF,
+                                    _ => unreachable!(),
+                                });    
+                            }    
+    
+                            Some(Token::Register {
+                                name: RegisterName::B,
+                                ..    
+                            }) => {    
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0xC0,
+                                    1 => 0xC8,
+                                    2 => 0xD0,
+                                    3 => 0xD8,
+                                    4 => 0xE0,
+                                    5 => 0xE8,
+                                    6 => 0xF0,
+                                    7 => 0xF8,
+                                    _ => unreachable!(),
+                                });    
+                            }    
+    
+                            Some(Token::Register {
+                                name: RegisterName::C,
+                                ..    
+                            }) => {    
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0xC1,
+                                    1 => 0xC9,
+                                    2 => 0xD1,
+                                    3 => 0xD9,
+                                    4 => 0xE1,
+                                    5 => 0xE9,
+                                    6 => 0xF1,
+                                    7 => 0xF9,
+                                    _ => unreachable!(),
+                                });    
+                            }    
+    
+                            Some(Token::Register {
+                                name: RegisterName::D,
+                                ..    
+                            }) => {    
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0xC2,
+                                    1 => 0xCA,
+                                    2 => 0xD2,
+                                    3 => 0xDA,
+                                    4 => 0xE2,
+                                    5 => 0xEA,
+                                    6 => 0xF2,
+                                    7 => 0xFA,
+                                    _ => unreachable!(),
+                                });    
+                            }    
+    
+                            Some(Token::Register {
+                                name: RegisterName::E,
+                                ..    
+                            }) => {    
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0xC3,
+                                    1 => 0xCB,
+                                    2 => 0xD3,
+                                    3 => 0xDB,
+                                    4 => 0xE3,
+                                    5 => 0xEB,
+                                    6 => 0xF3,
+                                    7 => 0xFB,
+                                    _ => unreachable!(),
+                                });    
+                            }    
+    
+                            Some(Token::Register {
+                                name: RegisterName::H,
+                                ..    
+                            }) => {    
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0xC4,
+                                    1 => 0xCC,
+                                    2 => 0xD4,
+                                    3 => 0xDC,
+                                    4 => 0xE4,
+                                    5 => 0xEC,
+                                    6 => 0xF4,
+                                    7 => 0xFC,
+                                    _ => unreachable!(),
+                                });    
+                            }    
+    
+                            Some(Token::Register {
+                                name: RegisterName::L,
+                                ..    
+                            }) => {    
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0xC5,
+                                    1 => 0xCD,
+                                    2 => 0xD5,
+                                    3 => 0xDD,
+                                    4 => 0xE5,
+                                    5 => 0xED,
+                                    6 => 0xF5,
+                                    7 => 0xFD,
+                                    _ => unreachable!(),
+                                });    
+                            }    
+    
+                            Some(Token::Symbol {
+                                name: SymbolName::ParenOpen,
+                                ..    
+                            }) => {    
+                                asm.expect_register(RegisterName::HL)?;
+                                asm.expect_symbol(SymbolName::ParenClose)?;
+                                asm.data.push(0xCB);
+                                asm.data.push(match value {
+                                    0 => 0xC6,
+                                    1 => 0xCE,
+                                    2 => 0xD6,
+                                    3 => 0xDE,
+                                    4 => 0xE6,
+                                    5 => 0xEE,
+                                    6 => 0xF6,
+                                    7 => 0xFE,
+                                    _ => unreachable!(),
+                                });    
+                            }    
+    
+                            Some(tok) => {    
+                                return asm_err!(
+                                    tok.loc(),
+                                    "Unexpected {}, expected a register",
+                                    tok.as_display(&asm.str_interner)
+                                )    
+                            }
+                        }
+                    }
+                }
+            }
         }
         Ok(())
     }

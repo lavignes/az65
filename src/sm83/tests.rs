@@ -551,30 +551,6 @@ fn ldh() {
 }
 
 #[test]
-fn stop() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-            stop
-            @dw @here
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x10,
-        1, 0x00
-    ], data);
-}
-
-#[test]
 fn jr() {
     let assembler = assembler(&[(
         "/test.asm",
@@ -741,6 +717,9 @@ fn misc() {
             cpl
             ccf
             halt
+            di
+            ei
+            stop
             @dw @here
         "#,
     )]);
@@ -759,7 +738,10 @@ fn misc() {
         0x2F,
         0x3F,
         0x76,
-        5, 0x00
+        0xF3,
+        0xFB,
+        0x10,
+        8, 0x00
     ], data);
 }
 
@@ -1190,5 +1172,499 @@ fn call() {
         0xDC, 0x34, 0x12,
         0xCD, 0x34, 0x12,
         15, 0x00
+    ], data);
+}
+
+#[test]
+fn rst() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            rst $00
+            rst $08
+            rst $10
+            rst $18
+            rst $20
+            rst $28
+            rst $30
+            rst $38
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xC7,
+        0xCF,
+        0xD7,
+        0xDF,
+        0xE7,
+        0xEF,
+        0xF7,
+        0xFF,
+        8, 0x00
+    ], data);
+}
+
+#[test]
+fn push_pop() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            pop bc
+            pop de
+            pop hl
+            pop af
+            push bc
+            push de
+            push hl
+            push af
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xC1,
+        0xD1,
+        0xE1,
+        0xF1,
+        0xC5,
+        0xD5,
+        0xE5,
+        0xF5,
+        8, 0x00
+    ], data);
+}
+
+#[test]
+fn rlc() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            rlc a
+            rlc b
+            rlc c
+            rlc d
+            rlc e
+            rlc h
+            rlc l
+            rlc (hl)
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xCB, 0x07,
+        0xCB, 0x00,
+        0xCB, 0x01,
+        0xCB, 0x02,
+        0xCB, 0x03,
+        0xCB, 0x04,
+        0xCB, 0x05,
+        0xCB, 0x06,
+        16, 0x00
+    ], data);
+}
+
+#[test]
+fn rrc() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            rrc a
+            rrc b
+            rrc c
+            rrc d
+            rrc e
+            rrc h
+            rrc l
+            rrc (hl)
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xCB, 0x0F,
+        0xCB, 0x08,
+        0xCB, 0x09,
+        0xCB, 0x0A,
+        0xCB, 0x0B,
+        0xCB, 0x0C,
+        0xCB, 0x0D,
+        0xCB, 0x0E,
+        16, 0x00
+    ], data);
+}
+
+#[test]
+fn rl() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            rl a
+            rl b
+            rl c
+            rl d
+            rl e
+            rl h
+            rl l
+            rl (hl)
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xCB, 0x17,
+        0xCB, 0x10,
+        0xCB, 0x11,
+        0xCB, 0x12,
+        0xCB, 0x13,
+        0xCB, 0x14,
+        0xCB, 0x15,
+        0xCB, 0x16,
+        16, 0x00
+    ], data);
+}
+
+#[test]
+fn rr() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            rr a
+            rr b
+            rr c
+            rr d
+            rr e
+            rr h
+            rr l
+            rr (hl)
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xCB, 0x1F, 
+        0xCB, 0x18, 
+        0xCB, 0x19, 
+        0xCB, 0x1A, 
+        0xCB, 0x1B, 
+        0xCB, 0x1C, 
+        0xCB, 0x1D, 
+        0xCB, 0x1E, 
+        16, 0x00
+    ], data);
+}
+
+#[test]
+fn sla() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            sla a
+            sla b
+            sla c
+            sla d
+            sla e
+            sla h
+            sla l
+            sla (hl)
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xCB, 0x27,
+        0xCB, 0x20,
+        0xCB, 0x21,
+        0xCB, 0x22,
+        0xCB, 0x23,
+        0xCB, 0x24,
+        0xCB, 0x25,
+        0xCB, 0x26,
+        16, 0x00  
+    ], data);
+}
+
+#[test]
+fn sra() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"       
+            sra a  
+            sra b  
+            sra c  
+            sra d  
+            sra e  
+            sra h  
+            sra l  
+            sra (hl)
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xCB, 0x2F,
+        0xCB, 0x28,
+        0xCB, 0x29,
+        0xCB, 0x2A,
+        0xCB, 0x2B,
+        0xCB, 0x2C,
+        0xCB, 0x2D,
+        0xCB, 0x2E,
+        16, 0x00  
+    ], data);
+}
+
+#[test]
+fn swap() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            swap a
+            swap b
+            swap c
+            swap d
+            swap e
+            swap h
+            swap l
+            swap (hl)
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xCB, 0x37,
+        0xCB, 0x30,
+        0xCB, 0x31,
+        0xCB, 0x32,
+        0xCB, 0x33,
+        0xCB, 0x34,
+        0xCB, 0x35,
+        0xCB, 0x36,
+        16, 0x00   
+    ], data);
+}
+
+#[test]
+fn srl() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"        
+            srl a
+            srl b
+            srl c
+            srl d
+            srl e
+            srl h
+            srl l
+            srl (hl)
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xCB, 0x3F,
+        0xCB, 0x38,
+        0xCB, 0x39,
+        0xCB, 0x3A,
+        0xCB, 0x3B,
+        0xCB, 0x3C,
+        0xCB, 0x3D,
+        0xCB, 0x3E,
+        16, 0x00  
+    ], data);
+}
+
+#[test]
+fn bit() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            bit 0, a
+            bit 1, b
+            bit 2, c
+            bit 3, d
+            bit 4, e
+            bit 5, h
+            bit 6, l
+            bit 7, (hl)
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xCB, 0x47,
+        0xCB, 0x48,
+        0xCB, 0x51,
+        0xCB, 0x5A,
+        0xCB, 0x63,
+        0xCB, 0x6C,
+        0xCB, 0x75,
+        0xCB, 0x7E,
+        16, 0x00
+    ], data);
+}
+
+#[test]
+fn res() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#" 
+            res 0, a
+            res 1, b
+            res 2, c
+            res 3, d
+            res 4, e
+            res 5, h
+            res 6, l
+            res 7, (hl)
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xCB, 0x87,
+        0xCB, 0x88,
+        0xCB, 0x91,
+        0xCB, 0x9A,
+        0xCB, 0xA3,
+        0xCB, 0xAC,
+        0xCB, 0xB5,
+        0xCB, 0xBE,
+        16, 0x00
+    ], data);
+}
+
+#[test]
+fn set() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#" 
+            set 0, a
+            set 1, b
+            set 2, c
+            set 3, d
+            set 4, e
+            set 5, h
+            set 6, l
+            set 7, (hl)
+            @dw @here
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0xCB, 0xC7,
+        0xCB, 0xC8,
+        0xCB, 0xD1,
+        0xCB, 0xDA,
+        0xCB, 0xE3,
+        0xCB, 0xEC,
+        0xCB, 0xF5,
+        0xCB, 0xFE,
+        16, 0x00
     ], data);
 }
