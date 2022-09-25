@@ -1,5 +1,6 @@
 pub mod assembler;
 pub mod charreader;
+pub mod debug;
 pub mod expr;
 pub mod fileman;
 pub mod intern;

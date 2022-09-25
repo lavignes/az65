@@ -8,6 +8,7 @@ use std::{
 
 use az65::{
     assembler::Assembler,
+    debug::AZ65Meta,
     fileman::RealFileSystem,
     linker::DebugExporter,
     mos6502::{Mos6502, NameList},
@@ -44,7 +45,7 @@ enum Arch {
         #[clap(parse(from_os_str), value_name = "FILE")]
         file: PathBuf,
 
-        /// Base path and filename to output FCEUX (NES Emulator) "NameList" files
+        /// Base path and file name to output FCEUX (NES Emulator) "NameList" files
         ///
         /// For example, passing `-gNL path/myrom.nes` can generate files such as:
         /// * `path/myrom.nes.ram.nl`
@@ -56,6 +57,10 @@ enum Arch {
             verbatim_doc_comment
         )]
         g_nl: Option<PathBuf>,
+
+        /// Write AZ65 debug symbols to file
+        #[clap(parse(from_os_str), short = 'g', long = "debug", value_name = "FILE")]
+        g: Option<PathBuf>,
     },
 
     /// Zilog Z80 assembler
@@ -63,6 +68,10 @@ enum Arch {
         /// Path to input assembly file
         #[clap(parse(from_os_str), value_name = "FILE")]
         file: PathBuf,
+
+        /// Write AZ65 debug symbols to file
+        #[clap(parse(from_os_str), short = 'g', long = "debug", value_name = "FILE")]
+        g: Option<PathBuf>,
     },
 
     /// SM83 / GameBoy Z80 assembler
@@ -70,6 +79,10 @@ enum Arch {
         /// Path to input assembly file
         #[clap(parse(from_os_str), value_name = "FILE")]
         file: PathBuf,
+
+        /// Write AZ65 debug symbols to file
+        #[clap(parse(from_os_str), short = 'g', long = "debug", value_name = "FILE")]
+        g: Option<PathBuf>,
     },
 }
 
@@ -116,7 +129,7 @@ fn main() -> ExitCode {
                 }
             }
         }
-        Arch::Z80 { file } => {
+        Arch::Z80 { file, .. } => {
             let mut assembler = Assembler::new(file_system, Z80);
             for path in &args.include {
                 if let Err(e) = assembler.add_search_path(full_cwd.as_path(), path) {
@@ -132,7 +145,7 @@ fn main() -> ExitCode {
                 }
             }
         }
-        Arch::Sm83 { file } => {
+        Arch::Sm83 { file, .. } => {
             let mut assembler = Assembler::new(file_system, Sm83);
             for path in &args.include {
                 if let Err(e) = assembler.add_search_path(full_cwd.as_path(), path) {
@@ -151,17 +164,41 @@ fn main() -> ExitCode {
     };
 
     match module.link(&mut output) {
-        Ok((str_interner, file_system, symtab)) => {
+        Ok((str_interner, mut file_manager, symtab)) => {
             if let Arch::Mos6502 {
                 g_nl: Some(path), ..
             } = &args.architecture
             {
-                let mut nl = NameList::new(file_system, str_interner, full_cwd.as_path(), path);
-                if let Err(e) = nl.export(&symtab) {
+                let mut nl = NameList::new();
+                if let Err(e) = nl.export(
+                    &mut file_manager,
+                    str_interner.as_ref().borrow(),
+                    &symtab,
+                    full_cwd.as_path(),
+                    &path,
+                ) {
                     eprintln!("[ERROR]: {e}");
                     return ExitCode::FAILURE;
                 }
             }
+
+            if let Arch::Z80 { g: Some(path), .. }
+            | Arch::Mos6502 { g: Some(path), .. }
+            | Arch::Sm83 { g: Some(path), .. } = &args.architecture
+            {
+                let mut meta = AZ65Meta::new();
+                if let Err(e) = meta.export(
+                    &mut file_manager,
+                    str_interner.as_ref().borrow(),
+                    &symtab,
+                    full_cwd.as_path(),
+                    &path,
+                ) {
+                    eprintln!("[ERROR]: {e}");
+                    return ExitCode::FAILURE;
+                }
+            }
+
             ExitCode::SUCCESS
         }
         Err(e) => {

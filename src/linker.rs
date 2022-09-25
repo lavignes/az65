@@ -1,4 +1,9 @@
-use std::{cell::RefCell, io::Write, rc::Rc};
+use std::{
+    cell::{Ref, RefCell},
+    io::Write,
+    path::Path,
+    rc::Rc,
+};
 
 use crate::{
     expr::Expr,
@@ -20,7 +25,16 @@ impl DebugExporterError {
 }
 
 pub trait DebugExporter {
-    fn export(&mut self, symtab: &Symtab) -> Result<(), DebugExporterError>;
+    type FileSystem: FileSystem;
+
+    fn export(
+        &mut self,
+        file_manager: &mut FileManager<Self::FileSystem>,
+        str_interner: Ref<StrInterner>,
+        symtab: &Symtab,
+        cwd: &Path,
+        path: &Path,
+    ) -> Result<(), DebugExporterError>;
 }
 
 #[derive(thiserror::Error, Debug)]
