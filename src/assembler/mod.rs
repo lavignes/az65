@@ -173,6 +173,7 @@ pub struct Assembler<S, R, A: ArchTokens, Z> {
     pub(crate) here: u32,
     active_namespace: Option<StrRef>,
     active_macro: Option<StrRef>,
+    if_level: usize,
 
     marker: PhantomData<Z>,
 }
@@ -213,6 +214,7 @@ where
             here: 0,
             active_namespace: None,
             active_macro: None,
+            if_level: 0,
 
             marker: PhantomData,
         }
@@ -505,20 +507,6 @@ where
                                 self.cwd = None;
                                 self.token_sources
                                     .extend(states.drain(..).rev().map(TokenSource::Macro));
-                                continue;
-                            }
-
-                            Some(Token::Directive {
-                                loc,
-                                name: DirectiveName::If,
-                            }) => {
-                                if let Some(mac) = self.expect_if_directive(loc)? {
-                                    self.token_sources.push(self.token_source.take().unwrap());
-                                    self.cwds.push(self.cwd.unwrap());
-
-                                    self.token_sources.push(TokenSource::Macro(mac));
-                                    self.cwds.push(self.cwd.take().unwrap());
-                                }
                                 continue;
                             }
 
@@ -1248,96 +1236,9 @@ where
                 loc,
                 included_from: Some(loc),
                 str_interner: self.str_interner.clone(),
-            })
+            });
         }
         Ok(states)
-    }
-
-    fn expect_if_directive(
-        &mut self,
-        loc: SourceLoc,
-    ) -> Result<Option<MacroState<A>>, (SourceLoc, AssemblerError)> {
-        let result = match self.const_expr()? {
-            (_, Some(value)) => value,
-            (loc, None) => {
-                return asm_err!(
-                    loc,
-                    "The expression following an \"@if\" directive must be immediately solvable"
-                )
-            }
-        };
-
-        let name = self
-            .str_interner
-            .borrow_mut()
-            .intern(format!("@if Invocation{}", self.entropy));
-        self.entropy += 1;
-        let mut toks = Vec::new();
-        let mut if_depth = 1;
-        loop {
-            match self.next()? {
-                None => return self.end_of_input_err(),
-
-                Some(Token::NewLine { .. } | Token::Comment { .. }) => {}
-
-                Some(
-                    tok @ Token::Directive {
-                        name: DirectiveName::If,
-                        ..
-                    },
-                ) => {
-                    if if_depth > 0 {
-                        toks.push(MacroToken::Token(tok));
-                    }
-                    if_depth += 1;
-                }
-
-                Some(
-                    tok @ Token::Directive {
-                        name: DirectiveName::Endif,
-                        ..
-                    },
-                ) => {
-                    if_depth -= 1;
-                    if if_depth == 0 {
-                        break;
-                    }
-                    toks.push(MacroToken::Token(tok));
-                }
-
-                Some(tok) => {
-                    toks.push(MacroToken::Token(tok));
-                }
-            }
-            if if_depth == 0 {
-                break;
-            }
-        }
-
-        // If the if expression if false, then throw away all the tokens
-        if result == 0 {
-            return Ok(None);
-        }
-
-        self.macros.insert(
-            name,
-            Macro {
-                loc,
-                args: 1, // the current token
-                tokens: toks,
-            },
-        );
-
-        Ok(Some(MacroState {
-            name,
-            args: vec![],
-            macro_offset: 0,
-            expanding_macro_arg: None,
-            macro_arg_offset: 0,
-            loc,
-            included_from: Some(loc),
-            str_interner: self.str_interner.clone(),
-        }))
     }
 
     pub(crate) fn const_expr(
@@ -2822,6 +2723,58 @@ where
                         DirectiveName::EndMeta => {
                             self.next()?;
                             self.symtab.set_meta(&[]);
+                        }
+
+                        DirectiveName::If => {
+                            self.next()?;
+
+                            let result = match self.const_expr()? {
+                                (_, Some(value)) => value,
+                                (loc, None) => {
+                                    return asm_err!(
+                                        loc,
+                                        "The expression following an \"@if\" directive must be immediately solvable"
+                                    )
+                                }
+                            };
+
+                            if result != 0 {
+                                self.if_level += 1;
+                            } else {
+                                let mut if_level = 1;
+                                loop {
+                                    match self.next()? {
+                                        None => return self.end_of_input_err(),
+
+                                        Some(Token::Directive {
+                                            name: DirectiveName::If,
+                                            ..
+                                        }) => {
+                                            if_level += 1;
+                                        }
+
+                                        Some(Token::Directive {
+                                            name: DirectiveName::EndIf,
+                                            ..
+                                        }) => {
+                                            if_level -= 1;
+                                            if if_level == 0 {
+                                                break;
+                                            }
+                                        }
+
+                                        Some(_) => {}
+                                    }
+                                }
+                            }
+                        }
+
+                        DirectiveName::EndIf => {
+                            self.next()?;
+                            if self.if_level == 0 {
+                                return asm_err!(tok.loc(), "Unexpected \"@endif\"");
+                            }
+                            self.if_level -= 1;
                         }
 
                         _ => {

@@ -243,7 +243,7 @@ pub enum DirectiveName {
     Parse,
     Segment,
     If,
-    Endif,
+    EndIf,
 }
 
 impl DirectiveName {
@@ -283,7 +283,7 @@ impl DirectiveName {
             "@parse" | "@PARSE" => Some(Self::Parse),
             "@segment" | "@SEGMENT" => Some(Self::Segment),
             "@if" | "@IF" => Some(Self::If),
-            "@endif" | "@ENDIF" => Some(Self::Endif),
+            "@endif" | "@ENDIF" => Some(Self::EndIf),
             _ => None,
         }
     }
@@ -329,7 +329,7 @@ impl Display for DirectiveName {
                 Self::Parse => "@parse",
                 Self::Segment => "@segment",
                 Self::If => "@if",
-                Self::Endif => "@Endif",
+                Self::EndIf => "@Endif",
             }
         )
     }

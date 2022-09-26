@@ -606,6 +606,12 @@ fn if_directive() {
             @if ! @isdef TEST
                 @die "impossible!"
             @endif 
+
+            @if @isdef TEST
+                @if ! @isdef FOO
+                    nop
+                @endif
+            @endif
         "#,
     )]);
 
@@ -618,6 +624,7 @@ fn if_directive() {
 
     #[rustfmt::skip]
     assert_eq!(vec![
+        0x00,
         0x00,
     ], data);
 }
