@@ -11,6 +11,7 @@ pub trait FileSystem {
     type Reader: Read;
     type Writer: Write;
 
+    fn exists(&self, path: &Path) -> bool;
     fn is_dir(&self, path: &Path) -> io::Result<bool>;
     fn is_file(&self, path: &Path) -> io::Result<bool>;
     fn open_read(&self, path: &Path) -> io::Result<Self::Reader>;
@@ -29,6 +30,11 @@ impl RealFileSystem {
 impl FileSystem for RealFileSystem {
     type Reader = File;
     type Writer = File;
+
+    #[inline]
+    fn exists(&self, path: &Path) -> bool {
+        path.exists()
+    }
 
     #[inline]
     fn is_dir(&self, path: &Path) -> io::Result<bool> {
@@ -123,7 +129,7 @@ impl<S: FileSystem> FileManager<S> {
         for dir in iter::once(&cwd).chain(&self.search_paths) {
             let dir = self.path_interner.get(*dir).unwrap().to_path_buf();
             let path = dir.join(path.as_ref());
-            if self.file_system.is_file(path.as_ref())? {
+            if self.file_system.exists(path.as_ref()) && self.file_system.is_file(path.as_ref())? {
                 return Ok(Some(self.path_interner.intern(dir, path)));
             }
         }

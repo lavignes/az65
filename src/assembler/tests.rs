@@ -33,6 +33,11 @@ impl FileSystem for StringFileSystem {
     type Writer = Cursor<Vec<u8>>;
 
     #[inline]
+    fn exists(&self, _: &Path) -> bool {
+        true
+    }
+
+    #[inline]
     fn is_dir(&self, _: &Path) -> io::Result<bool> {
         Ok(true)
     }

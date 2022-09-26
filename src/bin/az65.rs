@@ -33,6 +33,10 @@ struct Args {
     /// Paths to search for included files [repeatable]
     #[clap(parse(from_os_str), short = 'I', long, value_name = "DIRECTORY")]
     include: Vec<PathBuf>,
+
+    /// Write AZ65 debug symbols to file
+    #[clap(parse(from_os_str), short = 'g', long = "debug", value_name = "FILE")]
+    g: Option<PathBuf>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -56,10 +60,6 @@ enum Arch {
             verbatim_doc_comment
         )]
         g_nl: Option<PathBuf>,
-
-        /// Write AZ65 debug symbols to file
-        #[clap(parse(from_os_str), short = 'g', long = "debug", value_name = "FILE")]
-        g: Option<PathBuf>,
     },
 
     /// Zilog Z80 assembler
@@ -67,10 +67,6 @@ enum Arch {
         /// Path to input assembly file
         #[clap(parse(from_os_str), value_name = "FILE")]
         file: PathBuf,
-
-        /// Write AZ65 debug symbols to file
-        #[clap(parse(from_os_str), short = 'g', long = "debug", value_name = "FILE")]
-        g: Option<PathBuf>,
     },
 
     /// SM83 / GameBoy Z80 assembler
@@ -78,10 +74,6 @@ enum Arch {
         /// Path to input assembly file
         #[clap(parse(from_os_str), value_name = "FILE")]
         file: PathBuf,
-
-        /// Write AZ65 debug symbols to file
-        #[clap(parse(from_os_str), short = 'g', long = "debug", value_name = "FILE")]
-        g: Option<PathBuf>,
     },
 }
 
@@ -181,10 +173,7 @@ fn main() -> ExitCode {
                 }
             }
 
-            if let Arch::Z80 { g: Some(path), .. }
-            | Arch::Mos6502 { g: Some(path), .. }
-            | Arch::Sm83 { g: Some(path), .. } = &args.architecture
-            {
+            if let Some(path) = &args.g {
                 let mut meta = AZ65Meta::new();
                 if let Err(e) = meta.export(
                     &mut file_manager,

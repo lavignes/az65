@@ -96,6 +96,7 @@ impl<R: Read, A: ArchTokens> TokenSource<R, A> {
                             if index >= mac.args {
                                 let interner = state.str_interner.as_ref().borrow();
                                 let name = interner.get(state.name).unwrap();
+                                let index = index + 1;
                                 return Some(asm_err!(
                                     loc,
                                     "Unexpected argument index: ({index}), the macro \"{name}\" takes {} arguments",
@@ -106,14 +107,6 @@ impl<R: Read, A: ArchTokens> TokenSource<R, A> {
                             state.expanding_macro_arg = Some(index);
                             state.macro_arg_offset = 0;
                             continue;
-                        }
-
-                        MacroToken::Uniq(loc) => {
-                            state.macro_offset += 1;
-                            state.loc = loc;
-                            let value = state.entropy as u32;
-                            state.entropy += 1;
-                            return Some(Ok(Token::Number { loc, value }));
                         }
                     }
                 }
@@ -126,7 +119,6 @@ impl<R: Read, A: ArchTokens> TokenSource<R, A> {
 enum MacroToken<A: ArchTokens> {
     Token(Token<A>),
     Argument { loc: SourceLoc, index: usize },
-    Uniq(SourceLoc),
 }
 
 struct Macro<A: ArchTokens> {
@@ -153,7 +145,6 @@ struct MacroState<A: ArchTokens> {
     expanding_macro_arg: Option<usize>,
     macro_arg_offset: usize,
     loc: SourceLoc,
-    entropy: usize,
     included_from: Option<SourceLoc>,
     str_interner: Rc<RefCell<StrInterner>>,
 }
@@ -453,8 +444,6 @@ where
                                 self.token_sources.push(self.token_source.take().unwrap());
                                 self.cwds.push(self.cwd.unwrap());
 
-                                let entropy = self.entropy;
-                                self.entropy += 1;
                                 self.token_sources.push(TokenSource::Macro(MacroState {
                                     name,
                                     args: Vec::new(),
@@ -462,7 +451,6 @@ where
                                     expanding_macro_arg: None,
                                     macro_arg_offset: 0,
                                     loc,
-                                    entropy,
                                     included_from: Some(loc),
                                     str_interner: self.str_interner.clone(),
                                 }));
@@ -807,8 +795,6 @@ where
             }
         }
 
-        let entropy = self.entropy;
-        self.entropy += 1;
         Ok(MacroState {
             name,
             args,
@@ -816,7 +802,6 @@ where
             expanding_macro_arg: None,
             macro_arg_offset: 0,
             loc,
-            entropy,
             included_from: Some(loc),
             str_interner: self.str_interner.clone(),
         })
@@ -946,8 +931,6 @@ where
             },
         );
 
-        let entropy = self.entropy;
-        self.entropy += 1;
         Ok(MacroState {
             name,
             args: Vec::new(),
@@ -955,7 +938,6 @@ where
             expanding_macro_arg: None,
             macro_arg_offset: 0,
             loc,
-            entropy,
             included_from: Some(loc),
             str_interner: self.str_interner.clone(),
         })
@@ -1014,8 +996,6 @@ where
             },
         );
 
-        let entropy = self.entropy;
-        self.entropy += 1;
         Ok(MacroState {
             name,
             args: Vec::new(),
@@ -1023,7 +1003,6 @@ where
             expanding_macro_arg: None,
             macro_arg_offset: 0,
             loc,
-            entropy,
             included_from: Some(loc),
             str_interner: self.str_interner.clone(),
         })
@@ -1208,7 +1187,7 @@ where
 
                 Some(Token::MacroArg { loc, value }) => {
                     if value == 0 {
-                        toks.push(MacroToken::Uniq(loc));
+                        todo!("need error message");
                     } else {
                         toks.push(MacroToken::Argument {
                             loc,
@@ -1246,8 +1225,6 @@ where
 
         let mut states = Vec::new();
         for arg in args {
-            let entropy = self.entropy;
-            self.entropy += 1;
             states.push(MacroState {
                 name,
                 args: vec![vec![arg]],
@@ -1255,7 +1232,6 @@ where
                 expanding_macro_arg: None,
                 macro_arg_offset: 0,
                 loc,
-                entropy,
                 included_from: Some(loc),
                 str_interner: self.str_interner.clone(),
             })
@@ -2488,7 +2464,7 @@ where
 
                                     Some(Token::MacroArg { loc, value }) => {
                                         if value == 0 {
-                                            toks.push(MacroToken::Uniq(loc));
+                                            todo!("need error message");
                                         } else {
                                             toks.push(MacroToken::Argument {
                                                 loc,
