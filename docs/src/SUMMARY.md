@@ -36,6 +36,7 @@
 
 - [Macro-Like Directives](./macro_like_directives.md)
   - [`@getmeta`](./macro_like/getmeta.md)
+  - [`@if`](./macro_like/if.md)
   - [`@include`](./macro_like/include.md)
   - [`@isdef`](./macro_like/isdef.md)
   - [`@string`](./macro_like/string.md)

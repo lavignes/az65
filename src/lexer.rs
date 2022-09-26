@@ -242,6 +242,8 @@ pub enum DirectiveName {
     Count,
     Parse,
     Segment,
+    If,
+    Endif,
 }
 
 impl DirectiveName {
@@ -280,6 +282,8 @@ impl DirectiveName {
             "@count" | "@COUNT" => Some(Self::Count),
             "@parse" | "@PARSE" => Some(Self::Parse),
             "@segment" | "@SEGMENT" => Some(Self::Segment),
+            "@if" | "@IF" => Some(Self::If),
+            "@endif" | "@ENDIF" => Some(Self::Endif),
             _ => None,
         }
     }
@@ -324,6 +328,8 @@ impl Display for DirectiveName {
                 Self::Count => "@count",
                 Self::Parse => "@parse",
                 Self::Segment => "@segment",
+                Self::If => "@if",
+                Self::Endif => "@Endif",
             }
         )
     }

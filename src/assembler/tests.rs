@@ -593,6 +593,36 @@ fn control_flow() {
 }
 
 #[test]
+fn if_directive() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            @if ! @isdef TEST
+                nop
+            @endif 
+            
+            @defn TEST, 1
+
+            @if ! @isdef TEST
+                @die "impossible!"
+            @endif 
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+
+    #[rustfmt::skip]
+    assert_eq!(vec![
+        0x00,
+    ], data);
+}
+
+#[test]
 fn parse() {
     let assembler = assembler(&[(
         "/test.asm",
