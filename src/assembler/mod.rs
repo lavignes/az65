@@ -708,6 +708,28 @@ where
         Ok(())
     }
 
+    pub(crate) fn expect_hmem_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
+        let (loc, expr) = self.expr()?;
+        if let Some(value) = expr.evaluate(&self.symtab) {
+            if (value as u32) > (u8::MAX as u32) {
+                if (value as u32) > (u16::MAX as u32) {
+                    return asm_err!(loc, "Expression result ({value}) will not fit in a word");
+                }
+                if !(0xFF00..=0xFFFF).contains(&value) {
+                    return asm_err!(
+                        loc,
+                        "Expression result ({value}) must be between $FF00 and $FFFF"
+                    );
+                }
+            }
+            self.data.push(value as u8);
+        } else {
+            self.links.push(Link::byte(loc, self.data.len(), expr));
+            self.data.push(0);
+        }
+        Ok(())
+    }
+
     pub(crate) fn expect_wide_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
         let (loc, expr) = self.expr()?;
         if let Some(value) = expr.evaluate(&self.symtab) {

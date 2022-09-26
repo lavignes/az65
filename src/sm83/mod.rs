@@ -1194,7 +1194,7 @@ where
                         ..
                     }) => {
                         asm.data.push(0xE0);
-                        asm.expect_immediate()?;
+                        asm.expect_hmem_immediate()?;
                         asm.expect_symbol(SymbolName::ParenClose)?;
                         asm.expect_symbol(SymbolName::Comma)?;
                         asm.expect_register(RegisterName::A)?;
@@ -1207,7 +1207,7 @@ where
                         asm.data.push(0xF0);
                         asm.expect_symbol(SymbolName::Comma)?;
                         asm.expect_symbol(SymbolName::ParenOpen)?;
-                        asm.expect_immediate()?;
+                        asm.expect_hmem_immediate()?;
                         asm.expect_symbol(SymbolName::ParenClose)?;
                     }
 
@@ -1224,6 +1224,7 @@ where
             OperationName::Stop => {
                 asm.next()?;
                 asm.data.push(0x10);
+                asm.data.push(0x00);
             }
 
             OperationName::Jr => {
