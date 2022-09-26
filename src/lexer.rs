@@ -329,7 +329,7 @@ impl Display for DirectiveName {
                 Self::Parse => "@parse",
                 Self::Segment => "@segment",
                 Self::If => "@if",
-                Self::EndIf => "@Endif",
+                Self::EndIf => "@endif",
             }
         )
     }
