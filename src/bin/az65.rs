@@ -11,7 +11,7 @@ use az65::{
     debug::{AZ65Meta, DebugExporter},
     fileman::RealFileSystem,
     mos6502::{Mos6502, NameList},
-    sm83::Sm83,
+    sm83::{Sm83, Sym},
     z80::Z80,
 };
 use clap::{Parser, Subcommand};
@@ -35,8 +35,8 @@ struct Args {
     include: Vec<PathBuf>,
 
     /// Write AZ65 debug symbols to file
-    #[clap(parse(from_os_str), short = 'g', long = "debug", value_name = "FILE")]
-    g: Option<PathBuf>,
+    #[clap(parse(from_os_str), short = 'g', long, value_name = "FILE")]
+    debug: Option<PathBuf>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -74,6 +74,10 @@ enum Arch {
         /// Path to input assembly file
         #[clap(parse(from_os_str), value_name = "FILE")]
         file: PathBuf,
+
+        /// Write SYM debug symboks to file
+        #[clap(parse(from_os_str), long = "gSYM", value_name = "FILE")]
+        g_sym: Option<PathBuf>,
     },
 }
 
@@ -173,7 +177,24 @@ fn main() -> ExitCode {
                 }
             }
 
-            if let Some(path) = &args.g {
+            if let Arch::Sm83 {
+                g_sym: Some(path), ..
+            } = &args.architecture
+            {
+                let mut sym = Sym::new();
+                if let Err(e) = sym.export(
+                    &mut file_manager,
+                    str_interner.as_ref().borrow(),
+                    &symtab,
+                    full_cwd.as_path(),
+                    &path,
+                ) {
+                    eprintln!("[ERROR]: {e}");
+                    return ExitCode::FAILURE;
+                }
+            }
+
+            if let Some(path) = &args.debug {
                 let mut meta = AZ65Meta::new();
                 if let Err(e) = meta.export(
                     &mut file_manager,

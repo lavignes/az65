@@ -58,7 +58,7 @@ where
                     ("ID", "RAM") => ram = true,
                     ("ID", "PRG") => prg = true,
                     ("BANK", value) => {
-                        if let Ok(value) = usize::from_str_radix(value, 10) {
+                        if let Ok(value) = usize::from_str_radix(value, 16) {
                             bank = Some(value);
                         }
                     }

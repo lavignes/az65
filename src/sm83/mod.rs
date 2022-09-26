@@ -12,6 +12,10 @@ use crate::{
 #[cfg(test)]
 mod tests;
 
+mod sym;
+
+pub use sym::*;
+
 macro_rules! asm_err {
     ($loc:expr, $($arg:tt)*) => {
         Err(($loc, AssemblerError(format!($($arg)*))))
