@@ -1,4 +1,4 @@
-use std::{io::Write, marker::PhantomData, path::Path};
+use std::{cell::RefCell, io::Write, marker::PhantomData, path::Path, rc::Rc};
 
 use fxhash::FxHashMap;
 
@@ -31,7 +31,7 @@ where
     fn export(
         &mut self,
         file_manager: &mut FileManager<Self::FileSystem>,
-        str_interner: &StrInterner,
+        str_interner: &Rc<RefCell<StrInterner>>,
         symtab: &Symtab,
         cwd: &Path,
         path: &Path,
@@ -43,16 +43,17 @@ where
             let sym = symtab.get(*strref).unwrap();
             let value = match sym.inner() {
                 Symbol::Value(value) => *value,
-                Symbol::Expr(expr) => expr.evaluate(symtab).unwrap(),
+                Symbol::Expr(expr) => expr.evaluate(symtab, str_interner).unwrap(),
             };
             let meta = symtab.meta_interner().get(sym.meta()).unwrap();
 
+            let interner = str_interner.as_ref().borrow();
             let mut ram = false;
             let mut prg = false;
             let mut bank = None;
             for pair in meta {
-                let key = str_interner.get(pair[0]).unwrap();
-                let value = str_interner.get(pair[1]).unwrap();
+                let key = interner.get(pair[0]).unwrap();
+                let value = interner.get(pair[1]).unwrap();
                 match (key, value) {
                     ("ID", "ZP") => ram = true,
                     ("ID", "RAM") => ram = true,
@@ -95,8 +96,9 @@ where
                 }
             };
 
+            let interner = str_interner.as_ref().borrow();
             for (label, value) in ram_entries {
-                let label = str_interner.get(*label).unwrap();
+                let label = interner.get(*label).unwrap();
                 if let Err(e) = writeln!(writer, "${value:04X}#{label}#") {
                     return Err(DebugExporterError::new(format!(
                         "Failed to write to \"{}\": {e}",
@@ -106,6 +108,7 @@ where
             }
         }
 
+        let interner = str_interner.as_ref().borrow();
         for (bank, entries) in prg_banks {
             let mut path = path.to_path_buf();
             let mut extension = path.extension().unwrap_or_default().to_os_string();
@@ -122,7 +125,7 @@ where
             };
 
             for (label, value) in entries {
-                let label = str_interner.get(*label).unwrap();
+                let label = interner.get(*label).unwrap();
                 if let Err(e) = writeln!(writer, "${value:04X}#{label}#") {
                     return Err(DebugExporterError::new(format!(
                         "Failed to write to \"{}\": {e}",

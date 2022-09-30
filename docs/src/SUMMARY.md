@@ -29,6 +29,7 @@
   - [`@segment`](./simple/segment.md)
   - [`@if`](./simple/if.md)
   - [`@struct`](./simple/struct.md)
+  - [`@sizeof`](./simple/sizeof.md)
   - [`@incbin`](./simple/incbin.md)
   - [`@align`](./simple/align.md)
   - [`@meta`](./simple/meta.md)

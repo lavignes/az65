@@ -696,7 +696,7 @@ where
 
     pub(crate) fn expect_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
         let (loc, expr) = self.expr()?;
-        if let Some(value) = expr.evaluate(&self.symtab) {
+        if let Some(value) = expr.evaluate(&self.symtab, &self.str_interner) {
             if (value as u32) > (u8::MAX as u32) {
                 return asm_err!(loc, "Expression result ({value}) will not fit in a byte");
             }
@@ -710,7 +710,7 @@ where
 
     pub(crate) fn expect_hmem_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
         let (loc, expr) = self.expr()?;
-        if let Some(value) = expr.evaluate(&self.symtab) {
+        if let Some(value) = expr.evaluate(&self.symtab, &self.str_interner) {
             if (value as u32) > (u8::MAX as u32) {
                 if (value as u32) > (u16::MAX as u32) {
                     return asm_err!(loc, "Expression result ({value}) will not fit in a word");
@@ -732,7 +732,7 @@ where
 
     pub(crate) fn expect_wide_immediate(&mut self) -> Result<(), (SourceLoc, AssemblerError)> {
         let (loc, expr) = self.expr()?;
-        if let Some(value) = expr.evaluate(&self.symtab) {
+        if let Some(value) = expr.evaluate(&self.symtab, &self.str_interner) {
             if (value as u32) > (u16::MAX as u32) {
                 return asm_err!(loc, "Expression result ({value}) will not fit in a word");
             }
@@ -749,7 +749,7 @@ where
         let (loc, mut expr) = self.expr()?;
         expr.push(ExprNode::Value(self.here.wrapping_add(2) as i32)); // subtract where the PC will be
         expr.push(ExprNode::Sub);
-        if let Some(value) = expr.evaluate(&self.symtab) {
+        if let Some(value) = expr.evaluate(&self.symtab, &self.str_interner) {
             if (value < (i8::MIN as i32)) || (value > (i8::MAX as i32)) {
                 return asm_err!(loc, "Branch distance ({value}) will not fit in a byte");
             }
@@ -1267,7 +1267,7 @@ where
         &mut self,
     ) -> Result<(SourceLoc, Option<i32>), (SourceLoc, AssemblerError)> {
         self.expr()
-            .map(|(loc, expr)| (loc, expr.evaluate(&self.symtab)))
+            .map(|(loc, expr)| (loc, expr.evaluate(&self.symtab, &self.str_interner)))
     }
 
     pub(crate) fn expr(&mut self) -> Result<(SourceLoc, Expr), (SourceLoc, AssemblerError)> {
@@ -1670,6 +1670,49 @@ where
                         return Ok(loc);
                     }
 
+                    DirectiveName::SizeOf => {
+                        self.next()?;
+                        match self.next()? {
+                            None => return self.end_of_input_err(),
+
+                            Some(Token::Label { loc, kind, value }) => {
+                                let direct = match kind {
+                                    LabelKind::Global | LabelKind::Direct => value,
+
+                                    LabelKind::Local => {
+                                        if let Some(namespace) = self.active_namespace {
+                                            let direct_label = {
+                                                let interner = self.str_interner.as_ref().borrow();
+                                                let label = interner.get(value).unwrap();
+                                                let global = interner.get(namespace).unwrap();
+                                                format!("{global}{label}")
+                                            };
+                                            self.str_interner.borrow_mut().intern(direct_label)
+                                        } else {
+                                            let interner = self.str_interner.as_ref().borrow();
+                                            let label = interner.get(value).unwrap();
+                                            return asm_err!(loc, "The local label \"{label}\" is being evaluated but there was no global label defined before it");
+                                        }
+                                    }
+                                };
+
+                                nodes.push(ExprNode::SizeOf(direct));
+                                // Important to record where in expressions we reference
+                                // symbols, so we can barf at link time
+                                self.symtab.touch(direct, loc);
+                                return Ok(loc);
+                            }
+
+                            Some(tok) => {
+                                return asm_err!(
+                                    tok.loc(),
+                                    "Unexpected {}, expected a struct field label",
+                                    tok.as_display(&self.str_interner)
+                                )
+                            }
+                        }
+                    }
+
                     _ => {
                         return asm_err!(
                             loc,
@@ -1705,7 +1748,8 @@ where
                                 nodes.push(ExprNode::Value(*value));
                             }
                             Symbol::Expr(expr) => {
-                                if let Some(value) = expr.evaluate(&self.symtab) {
+                                if let Some(value) = expr.evaluate(&self.symtab, &self.str_interner)
+                                {
                                     nodes.push(ExprNode::Value(value));
                                 } else {
                                     nodes.push(ExprNode::Label(direct));
@@ -1874,7 +1918,7 @@ where
                                 None
                             };
 
-                            if let Some(value) = expr.evaluate(&self.symtab) {
+                            if let Some(value) = expr.evaluate(&self.symtab, &self.str_interner) {
                                 if value == 0 {
                                     if let Some(msg) = msg {
                                         let interner = self.str_interner.as_ref().borrow();
@@ -2130,7 +2174,9 @@ where
 
                                         _ => {
                                             let (loc, expr) = self.expr()?;
-                                            if let Some(value) = expr.evaluate(&self.symtab) {
+                                            if let Some(value) =
+                                                expr.evaluate(&self.symtab, &self.str_interner)
+                                            {
                                                 if (value as u32) > (u8::MAX as u32) {
                                                     return asm_err!(loc, "\"@db\" expression result ({value}) will not fit in a byte");
                                                 }
@@ -2174,7 +2220,9 @@ where
                                 SegmentMode::Code => loop {
                                     self.peek()?;
                                     let (loc, expr) = self.expr()?;
-                                    if let Some(value) = expr.evaluate(&self.symtab) {
+                                    if let Some(value) =
+                                        expr.evaluate(&self.symtab, &self.str_interner)
+                                    {
                                         if (value as u32) > (u16::MAX as u32) {
                                             return asm_err!(
                                             loc,
@@ -2242,7 +2290,9 @@ where
                                     {
                                         self.next()?;
                                         let (loc, expr) = self.expr()?;
-                                        if let Some(value) = expr.evaluate(&self.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&self.symtab, &self.str_interner)
+                                        {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(
                                             loc,
@@ -2642,10 +2692,15 @@ where
                                                             );
                                                 }
                                                 (_, Some(field_size)) => {
+                                                    let mut interner =
+                                                        self.str_interner.borrow_mut();
+                                                    let key = interner.intern("@SIZEOF");
+                                                    let value =
+                                                        interner.intern(format!("{field_size}"));
                                                     self.symtab.insert_with_meta(
                                                         direct,
                                                         Symbol::Value(struct_size),
-                                                        &[],
+                                                        &[[key, value]],
                                                     );
                                                     struct_size =
                                                         struct_size.wrapping_add(field_size);

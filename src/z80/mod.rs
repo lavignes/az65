@@ -529,7 +529,9 @@ where
                                         asm.data.push(0xDD);
                                         asm.data.push(0x8E);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&asm.symtab, &asm.str_interner)
+                                        {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -549,7 +551,9 @@ where
                                         asm.data.push(0xFD);
                                         asm.data.push(0x8E);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&asm.symtab, &asm.str_interner)
+                                        {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -564,7 +568,9 @@ where
                                     Some(_) => {
                                         asm.data.push(0xCE);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&asm.symtab, &asm.str_interner)
+                                        {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -581,7 +587,7 @@ where
                             Some(_) => {
                                 asm.data.push(0xCE);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -783,7 +789,9 @@ where
                                         asm.data.push(0xDD);
                                         asm.data.push(0x86);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&asm.symtab, &asm.str_interner)
+                                        {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -803,7 +811,9 @@ where
                                         asm.data.push(0xFD);
                                         asm.data.push(0x86);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&asm.symtab, &asm.str_interner)
+                                        {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -818,7 +828,9 @@ where
                                     Some(_) => {
                                         asm.data.push(0xC6);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&asm.symtab, &asm.str_interner)
+                                        {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -835,7 +847,7 @@ where
                             Some(_) => {
                                 asm.data.push(0xC6);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -1123,7 +1135,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xA6);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -1146,7 +1158,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xA6);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -1174,7 +1186,7 @@ where
                     Some(_) => {
                         asm.data.push(0xE6);
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u8::MAX as u32) {
                                 return asm_err!(
                                     loc,
@@ -1353,7 +1365,7 @@ where
                                         asm.data.push(0xDD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -1380,7 +1392,7 @@ where
                                         asm.data.push(0xFD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -1494,7 +1506,7 @@ where
                     None => return asm.end_of_input_err(),
                 }
                 let (loc, expr) = asm.expr()?;
-                if let Some(value) = expr.evaluate(&asm.symtab) {
+                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                     if (value as u32) > (u16::MAX as u32) {
                         return asm_err!(loc, "Expression result ({value}) will not fit in a word");
                     }
@@ -1630,7 +1642,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xBE);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -1653,7 +1665,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xBE);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -1671,7 +1683,7 @@ where
                             Some(_) => {
                                 asm.data.push(0xFE);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -1691,7 +1703,7 @@ where
                     Some(_) => {
                         asm.data.push(0xFE);
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u8::MAX as u32) {
                                 return asm_err!(
                                     loc,
@@ -1891,7 +1903,7 @@ where
                             asm.data.push(0xDD);
                             asm.data.push(0x35);
                             let (loc, expr) = asm.expr()?;
-                            if let Some(value) = expr.evaluate(&asm.symtab) {
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                 if (value as u32) > (u8::MAX as u32) {
                                     return asm_err!(
                                         loc,
@@ -1914,7 +1926,7 @@ where
                             asm.data.push(0xFD);
                             asm.data.push(0x35);
                             let (loc, expr) = asm.expr()?;
-                            if let Some(value) = expr.evaluate(&asm.symtab) {
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                 if (value as u32) > (u8::MAX as u32) {
                                     return asm_err!(
                                         loc,
@@ -1961,7 +1973,7 @@ where
                 // Make the expression relative to @here
                 expr.push(ExprNode::Value(asm.here.wrapping_add(2) as i32));
                 expr.push(ExprNode::Sub);
-                if let Some(value) = expr.evaluate(&asm.symtab) {
+                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                     if (value < (i8::MIN as i32)) || (value > (i8::MAX as i32)) {
                         return asm_err!(loc, "Jump distance ({value}) will not fit in a byte");
                     }
@@ -2119,7 +2131,7 @@ where
                             Some(_) => {
                                 asm.data.push(0xDB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -2368,7 +2380,7 @@ where
                             asm.data.push(0xDD);
                             asm.data.push(0x34);
                             let (loc, expr) = asm.expr()?;
-                            if let Some(value) = expr.evaluate(&asm.symtab) {
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                 if (value as u32) > (u8::MAX as u32) {
                                     return asm_err!(
                                         loc,
@@ -2391,7 +2403,7 @@ where
                             asm.data.push(0xFD);
                             asm.data.push(0x34);
                             let (loc, expr) = asm.expr()?;
-                            if let Some(value) = expr.evaluate(&asm.symtab) {
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                 if (value as u32) > (u8::MAX as u32) {
                                     return asm_err!(
                                         loc,
@@ -2569,7 +2581,7 @@ where
                             }
                         }
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u16::MAX as u32) {
                                 return asm_err!(
                                     loc,
@@ -2635,7 +2647,7 @@ where
                 // Make the expression relative to @here
                 expr.push(ExprNode::Value(asm.here.wrapping_add(2) as i32));
                 expr.push(ExprNode::Sub);
-                if let Some(value) = expr.evaluate(&asm.symtab) {
+                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                     if (value < (i8::MIN as i32)) || (value > (i8::MAX as i32)) {
                         return asm_err!(loc, "Jump distance ({value}) will not fit in a byte");
                     }
@@ -2801,7 +2813,9 @@ where
                                         }
                                         asm.expect_symbol(SymbolName::Plus)?;
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&asm.symtab, &asm.str_interner)
+                                        {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -2815,7 +2829,9 @@ where
                                     Some(_) => {
                                         asm.data.push(0x3A);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&asm.symtab, &asm.str_interner)
+                                        {
                                             if (value as u32) > (u16::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a word");
                                             }
@@ -2833,7 +2849,7 @@ where
                             Some(_) => {
                                 asm.data.push(0x3E);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -2963,7 +2979,7 @@ where
                                         }
                                         asm.expect_symbol(SymbolName::Plus)?;
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -2980,7 +2996,7 @@ where
                             Some(_) => {
                                 asm.data.push(0x06);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -3110,7 +3126,7 @@ where
                                         }
                                         asm.expect_symbol(SymbolName::Plus)?;
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -3127,7 +3143,7 @@ where
                             Some(_) => {
                                 asm.data.push(0x0E);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -3257,7 +3273,7 @@ where
                                         }
                                         asm.expect_symbol(SymbolName::Plus)?;
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -3274,7 +3290,7 @@ where
                             Some(_) => {
                                 asm.data.push(0x16);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -3404,7 +3420,7 @@ where
                                         }
                                         asm.expect_symbol(SymbolName::Plus)?;
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -3421,7 +3437,7 @@ where
                             Some(_) => {
                                 asm.data.push(0x1E);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -3519,7 +3535,7 @@ where
                                         }
                                         asm.expect_symbol(SymbolName::Plus)?;
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -3536,7 +3552,7 @@ where
                             Some(_) => {
                                 asm.data.push(0x26);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -3634,7 +3650,7 @@ where
                                         }
                                         asm.expect_symbol(SymbolName::Plus)?;
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -3651,7 +3667,7 @@ where
                             Some(_) => {
                                 asm.data.push(0x2E);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -3734,7 +3750,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0x26);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -3817,7 +3833,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0x2E);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -3900,7 +3916,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0x26);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -3983,7 +3999,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0x2E);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -4065,7 +4081,7 @@ where
                                     asm.data.push(0x31);
                                 }
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u16::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -4105,7 +4121,7 @@ where
                             asm.data.push(0x01);
                         }
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u16::MAX as u32) {
                                 return asm_err!(
                                     loc,
@@ -4143,7 +4159,7 @@ where
                             asm.data.push(0x11);
                         }
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u16::MAX as u32) {
                                 return asm_err!(
                                     loc,
@@ -4180,7 +4196,7 @@ where
                             asm.data.push(0x21);
                         }
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u16::MAX as u32) {
                                 return asm_err!(
                                     loc,
@@ -4218,7 +4234,7 @@ where
                             asm.data.push(0x21);
                         }
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u16::MAX as u32) {
                                 return asm_err!(
                                     loc,
@@ -4256,7 +4272,7 @@ where
                             asm.data.push(0x21);
                         }
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u16::MAX as u32) {
                                 return asm_err!(
                                     loc,
@@ -4360,7 +4376,9 @@ where
                                 Some(_) => {
                                     asm.data.push(0x36);
                                     let (loc, expr) = asm.expr()?;
-                                    if let Some(value) = expr.evaluate(&asm.symtab) {
+                                    if let Some(value) =
+                                        expr.evaluate(&asm.symtab, &asm.str_interner)
+                                    {
                                         if (value as u32) > (u8::MAX as u32) {
                                             return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                         }
@@ -4380,7 +4398,9 @@ where
                             asm.expect_symbol(SymbolName::Plus)?;
                             asm.data.push(0xDD);
                             let (loc, expr) = asm.expr()?;
-                            let offset = if let Some(value) = expr.evaluate(&asm.symtab) {
+                            let offset = if let Some(value) =
+                                expr.evaluate(&asm.symtab, &asm.str_interner)
+                            {
                                 if (value as u32) > (u8::MAX as u32) {
                                     return asm_err!(
                                         loc,
@@ -4456,7 +4476,9 @@ where
                                     asm.data.push(0x36);
                                     asm.data.push(offset);
                                     let (loc, expr) = asm.expr()?;
-                                    if let Some(value) = expr.evaluate(&asm.symtab) {
+                                    if let Some(value) =
+                                        expr.evaluate(&asm.symtab, &asm.str_interner)
+                                    {
                                         if (value as u32) > (u8::MAX as u32) {
                                             return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                         }
@@ -4476,7 +4498,9 @@ where
                             asm.expect_symbol(SymbolName::Plus)?;
                             asm.data.push(0xFD);
                             let (loc, expr) = asm.expr()?;
-                            let offset = if let Some(value) = expr.evaluate(&asm.symtab) {
+                            let offset = if let Some(value) =
+                                expr.evaluate(&asm.symtab, &asm.str_interner)
+                            {
                                 if (value as u32) > (u8::MAX as u32) {
                                     return asm_err!(
                                         loc,
@@ -4552,7 +4576,9 @@ where
                                     asm.data.push(0x36);
                                     asm.data.push(offset);
                                     let (loc, expr) = asm.expr()?;
-                                    if let Some(value) = expr.evaluate(&asm.symtab) {
+                                    if let Some(value) =
+                                        expr.evaluate(&asm.symtab, &asm.str_interner)
+                                    {
                                         if (value as u32) > (u8::MAX as u32) {
                                             return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                         }
@@ -4598,7 +4624,7 @@ where
                                 }
                                 Some(tok) => return asm_err!(tok.loc(),"Unexpected {}, expected registers \"a\", \"bc\", \"de\", \"hl\", \"sp\", \"ix\", or \"iy\"",tok.as_display(&asm.str_interner)),
                             }
-                            if let Some(value) = expr.evaluate(&asm.symtab) {
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                 if (value as u32) > (u16::MAX as u32) {
                                     return asm_err!(
                                         loc,
@@ -4778,7 +4804,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xB6);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -4801,7 +4827,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xB6);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -4828,7 +4854,7 @@ where
                     Some(_) => {
                         asm.data.push(0xF6);
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u8::MAX as u32) {
                                 return asm_err!(
                                     loc,
@@ -4927,7 +4953,7 @@ where
                     Some(_) => {
                         asm.data.push(0xD3);
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u8::MAX as u32) {
                                 return asm_err!(
                                     loc,
@@ -5179,7 +5205,7 @@ where
                                         asm.data.push(0xDD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -5206,7 +5232,7 @@ where
                                         asm.data.push(0xFD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -5397,7 +5423,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -5419,7 +5445,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -5532,7 +5558,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -5554,7 +5580,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -5673,7 +5699,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -5695,7 +5721,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -5808,7 +5834,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -5830,7 +5856,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -6023,7 +6049,9 @@ where
                                         asm.data.push(0xDD);
                                         asm.data.push(0x9E);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&asm.symtab, &asm.str_interner)
+                                        {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -6043,7 +6071,9 @@ where
                                         asm.data.push(0xFD);
                                         asm.data.push(0x9E);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&asm.symtab, &asm.str_interner)
+                                        {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -6058,7 +6088,9 @@ where
                                     Some(_) => {
                                         asm.data.push(0x9E);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) =
+                                            expr.evaluate(&asm.symtab, &asm.str_interner)
+                                        {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -6075,7 +6107,7 @@ where
                             Some(_) => {
                                 asm.data.push(0xDE);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -6320,7 +6352,7 @@ where
                                         asm.data.push(0xDD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -6347,7 +6379,7 @@ where
                                         asm.data.push(0xFD);
                                         asm.data.push(0xCB);
                                         let (loc, expr) = asm.expr()?;
-                                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                             if (value as u32) > (u8::MAX as u32) {
                                                 return asm_err!(loc,"Expression result ({value}) will not fit in a byte");
                                             }
@@ -6460,7 +6492,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -6482,7 +6514,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -6590,7 +6622,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -6612,7 +6644,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -6720,7 +6752,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -6742,7 +6774,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -6850,7 +6882,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -6872,7 +6904,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xCB);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -7025,7 +7057,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0x96);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -7048,7 +7080,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0x96);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -7074,7 +7106,7 @@ where
                     Some(_) => {
                         asm.data.push(0xD6);
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u8::MAX as u32) {
                                 return asm_err!(
                                     loc,
@@ -7209,7 +7241,7 @@ where
                                 asm.data.push(0xDD);
                                 asm.data.push(0xAE);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -7232,7 +7264,7 @@ where
                                 asm.data.push(0xFD);
                                 asm.data.push(0xAE);
                                 let (loc, expr) = asm.expr()?;
-                                if let Some(value) = expr.evaluate(&asm.symtab) {
+                                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                                     if (value as u32) > (u8::MAX as u32) {
                                         return asm_err!(
                                             loc,
@@ -7259,7 +7291,7 @@ where
                     Some(_) => {
                         asm.data.push(0xEE);
                         let (loc, expr) = asm.expr()?;
-                        if let Some(value) = expr.evaluate(&asm.symtab) {
+                        if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                             if (value as u32) > (u8::MAX as u32) {
                                 return asm_err!(
                                     loc,

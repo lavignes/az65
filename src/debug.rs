@@ -1,4 +1,4 @@
-use std::{io::Write, marker::PhantomData, path::Path};
+use std::{cell::RefCell, io::Write, marker::PhantomData, path::Path, rc::Rc};
 
 use fxhash::FxHashMap;
 
@@ -25,7 +25,7 @@ pub trait DebugExporter {
     fn export(
         &mut self,
         file_manager: &mut FileManager<Self::FileSystem>,
-        str_interner: &StrInterner,
+        str_interner: &Rc<RefCell<StrInterner>>,
         symtab: &Symtab,
         cwd: &Path,
         path: &Path,
@@ -61,7 +61,7 @@ where
     fn export(
         &mut self,
         file_manager: &mut FileManager<Self::FileSystem>,
-        str_interner: &StrInterner,
+        str_interner: &Rc<RefCell<StrInterner>>,
         symtab: &Symtab,
         cwd: &Path,
         path: &Path,
@@ -71,19 +71,20 @@ where
             let sym = symtab.get(*strref).unwrap();
             let value = match sym.inner() {
                 Symbol::Value(value) => *value,
-                Symbol::Expr(expr) => expr.evaluate(symtab).unwrap(),
+                Symbol::Expr(expr) => expr.evaluate(symtab, str_interner).unwrap(),
             };
 
+            let interner = str_interner.as_ref().borrow();
             let mut meta_map = FxHashMap::default();
             let meta = symtab.meta_interner().get(sym.meta()).unwrap();
             for pair in meta {
-                let key = str_interner.get(pair[0]).unwrap();
-                let value = str_interner.get(pair[1]).unwrap();
+                let key = interner.get(pair[0]).unwrap();
+                let value = interner.get(pair[1]).unwrap();
                 meta_map.insert(key.into(), value.into());
             }
 
             symbols.push(DebugSymbol {
-                name: str_interner.get(*strref).unwrap().into(),
+                name: interner.get(*strref).unwrap().into(),
                 value,
                 meta: meta_map,
             });

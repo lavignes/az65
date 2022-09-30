@@ -302,19 +302,20 @@ where
                     }) => {
                         asm.next()?;
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) > (u8::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a byte"
-                                );
-                            }
-                            value as u8
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) > (u8::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a byte"
+                                    );
+                                }
+                                value as u8
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
+                                0
+                            };
                         match asm.next()? {
                             None => return asm.end_of_input_err(),
 
@@ -349,30 +350,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0x75);
-                                } else {
-                                    asm.data.push(0x65);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0x75);
+                                    } else {
+                                        asm.data.push(0x65);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -429,19 +431,20 @@ where
                     }) => {
                         asm.next()?;
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) > (u8::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a byte"
-                                );
-                            }
-                            value as u8
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) > (u8::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a byte"
+                                    );
+                                }
+                                value as u8
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
+                                0
+                            };
                         match asm.next()? {
                             None => return asm.end_of_input_err(),
 
@@ -476,30 +479,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0x35);
-                                } else {
-                                    asm.data.push(0x25);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0x35);
+                                    } else {
+                                        asm.data.push(0x25);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -551,30 +555,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0x16);
-                                } else {
-                                    asm.data.push(0x06);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0x16);
+                                    } else {
+                                        asm.data.push(0x06);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -613,24 +618,25 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                asm.data.push(0x24);
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    asm.data.push(0x24);
+                                    asm.data.push(value as u8);
+                                    return Ok(());
+                                }
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         asm.data.push(0x2C);
                         asm.data.extend_from_slice(&(value as u16).to_le_bytes());
@@ -713,19 +719,20 @@ where
                     }) => {
                         asm.next()?;
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) > (u8::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a byte"
-                                );
-                            }
-                            value as u8
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) > (u8::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a byte"
+                                    );
+                                }
+                                value as u8
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
+                                0
+                            };
                         match asm.next()? {
                             None => return asm.end_of_input_err(),
 
@@ -760,30 +767,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0xD5);
-                                } else {
-                                    asm.data.push(0xC5);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0xD5);
+                                    } else {
+                                        asm.data.push(0xC5);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -836,24 +844,25 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                asm.data.push(0xE4);
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    asm.data.push(0xE4);
+                                    asm.data.push(value as u8);
+                                    return Ok(());
+                                }
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         asm.data.push(0xEC);
                         asm.data.extend_from_slice(&(value as u16).to_le_bytes());
@@ -877,24 +886,25 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                asm.data.push(0xC4);
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    asm.data.push(0xC4);
+                                    asm.data.push(value as u8);
+                                    return Ok(());
+                                }
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         asm.data.push(0xCC);
                         asm.data.extend_from_slice(&(value as u16).to_le_bytes());
@@ -909,30 +919,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0xD6);
-                                } else {
-                                    asm.data.push(0xC6);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0xD6);
+                                    } else {
+                                        asm.data.push(0xC6);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -976,19 +987,20 @@ where
                     }) => {
                         asm.next()?;
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) > (u8::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a byte"
-                                );
-                            }
-                            value as u8
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) > (u8::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a byte"
+                                    );
+                                }
+                                value as u8
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
+                                0
+                            };
                         match asm.next()? {
                             None => return asm.end_of_input_err(),
 
@@ -1023,30 +1035,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0x55);
-                                } else {
-                                    asm.data.push(0x45);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0x55);
+                                    } else {
+                                        asm.data.push(0x45);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -1090,30 +1103,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0xF6);
-                                } else {
-                                    asm.data.push(0xE6);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0xF6);
+                                    } else {
+                                        asm.data.push(0xE6);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -1150,7 +1164,7 @@ where
                 };
 
                 let (loc, expr) = asm.expr()?;
-                if let Some(value) = expr.evaluate(&asm.symtab) {
+                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                     if (value as u32) > (u16::MAX as u32) {
                         return asm_err!(loc, "Expression result ({value}) will not fit in a word");
                     }
@@ -1170,7 +1184,7 @@ where
                 asm.next()?;
                 asm.data.push(0x20);
                 let (loc, expr) = asm.expr()?;
-                if let Some(value) = expr.evaluate(&asm.symtab) {
+                if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
                     if (value as u32) > (u16::MAX as u32) {
                         return asm_err!(loc, "Expression result ({value}) will not fit in a word");
                     }
@@ -1202,19 +1216,20 @@ where
                     }) => {
                         asm.next()?;
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) > (u8::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a byte"
-                                );
-                            }
-                            value as u8
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) > (u8::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a byte"
+                                    );
+                                }
+                                value as u8
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
+                                0
+                            };
                         match asm.next()? {
                             None => return asm.end_of_input_err(),
 
@@ -1249,30 +1264,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0xB5);
-                                } else {
-                                    asm.data.push(0xA5);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0xB5);
+                                    } else {
+                                        asm.data.push(0xA5);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -1325,30 +1341,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::Y)?;
-                                    asm.data.push(0xB6);
-                                } else {
-                                    asm.data.push(0xA6);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::Y)?;
+                                        asm.data.push(0xB6);
+                                    } else {
+                                        asm.data.push(0xA6);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -1378,30 +1395,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0xB4);
-                                } else {
-                                    asm.data.push(0xA4);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0xB4);
+                                    } else {
+                                        asm.data.push(0xA4);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -1430,30 +1448,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0x56);
-                                } else {
-                                    asm.data.push(0x46);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0x56);
+                                    } else {
+                                        asm.data.push(0x46);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -1492,19 +1511,20 @@ where
                     }) => {
                         asm.next()?;
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) > (u8::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a byte"
-                                );
-                            }
-                            value as u8
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) > (u8::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a byte"
+                                    );
+                                }
+                                value as u8
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
+                                0
+                            };
                         match asm.next()? {
                             None => return asm.end_of_input_err(),
 
@@ -1539,30 +1559,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0x15);
-                                } else {
-                                    asm.data.push(0x05);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0x15);
+                                    } else {
+                                        asm.data.push(0x05);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -1634,30 +1655,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0x36);
-                                } else {
-                                    asm.data.push(0x26);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0x36);
+                                    } else {
+                                        asm.data.push(0x26);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -1686,30 +1708,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0x76);
-                                } else {
-                                    asm.data.push(0x66);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0x76);
+                                    } else {
+                                        asm.data.push(0x66);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -1753,19 +1776,20 @@ where
                     }) => {
                         asm.next()?;
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) > (u8::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a byte"
-                                );
-                            }
-                            value as u8
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) > (u8::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a byte"
+                                    );
+                                }
+                                value as u8
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
+                                0
+                            };
                         match asm.next()? {
                             None => return asm.end_of_input_err(),
 
@@ -1800,30 +1824,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0xF5);
-                                } else {
-                                    asm.data.push(0xE5);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0xF5);
+                                    } else {
+                                        asm.data.push(0xE5);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -1886,19 +1911,20 @@ where
                     }) => {
                         asm.next()?;
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) > (u8::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a byte"
-                                );
-                            }
-                            value as u8
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) > (u8::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a byte"
+                                    );
+                                }
+                                value as u8
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::byte(loc, asm.data.len() + 1, expr));
+                                0
+                            };
                         match asm.next()? {
                             None => return asm.end_of_input_err(),
 
@@ -1933,30 +1959,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0x95);
-                                } else {
-                                    asm.data.push(0x85);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0x95);
+                                    } else {
+                                        asm.data.push(0x85);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
                             asm.next()?;
@@ -2000,30 +2027,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::Y)?;
-                                    asm.data.push(0x96);
-                                } else {
-                                    asm.data.push(0x86);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::Y)?;
+                                        asm.data.push(0x96);
+                                    } else {
+                                        asm.data.push(0x86);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         asm.data.push(0x8E);
                         asm.data.extend_from_slice(&(value as u16).to_le_bytes());
@@ -2038,30 +2066,31 @@ where
 
                     Some(_) => {
                         let (loc, expr) = asm.expr()?;
-                        let value = if let Some(value) = expr.evaluate(&asm.symtab) {
-                            if (value as u32) <= (u8::MAX as u32) {
-                                if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
-                                    asm.next()?;
-                                    asm.expect_register(RegisterName::X)?;
-                                    asm.data.push(0x94);
-                                } else {
-                                    asm.data.push(0x84);
+                        let value =
+                            if let Some(value) = expr.evaluate(&asm.symtab, &asm.str_interner) {
+                                if (value as u32) <= (u8::MAX as u32) {
+                                    if asm.peeked_symbol(SymbolName::Comma)?.is_some() {
+                                        asm.next()?;
+                                        asm.expect_register(RegisterName::X)?;
+                                        asm.data.push(0x94);
+                                    } else {
+                                        asm.data.push(0x84);
+                                    }
+                                    asm.data.push(value as u8);
+                                    return Ok(());
                                 }
-                                asm.data.push(value as u8);
-                                return Ok(());
-                            }
-                            if (value as u32) > (u16::MAX as u32) {
-                                return asm_err!(
-                                    loc,
-                                    "Expression result ({value}) will not fit in a word"
-                                );
-                            }
-                            value
-                        } else {
-                            // We need to add 1 since we havent written the opcode yet :|
-                            asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
-                            0
-                        };
+                                if (value as u32) > (u16::MAX as u32) {
+                                    return asm_err!(
+                                        loc,
+                                        "Expression result ({value}) will not fit in a word"
+                                    );
+                                }
+                                value
+                            } else {
+                                // We need to add 1 since we havent written the opcode yet :|
+                                asm.links.push(Link::word(loc, asm.data.len() + 1, expr));
+                                0
+                            };
 
                         asm.data.push(0x8C);
                         asm.data.extend_from_slice(&(value as u16).to_le_bytes());

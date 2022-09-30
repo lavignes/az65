@@ -381,6 +381,11 @@ fn structs2() {
         r#"
             @assert MyStruct.field3 == 8 && MyStruct.field4 == 16
 
+            @assert @sizeof MyStruct.field1 == 2
+            @assert @sizeof MyStruct.field2 == 1
+            @assert @sizeof MyStruct.field3 == 1
+            @assert @sizeof MyStruct.field4 == 1
+
             @struct MyStruct
                 field1 2
                 field2 1
@@ -389,6 +394,12 @@ fn structs2() {
                 @align 8
                 field4 1
             @endstruct
+
+            @macro SIZEOF, 1
+                @@parse @@metaget @1, "@SIZEOF"
+            @endmacro
+            
+            @assert 2 == SIZEOF MyStruct.field1
         "#,
     )]);
 

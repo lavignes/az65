@@ -118,7 +118,7 @@ impl<S: FileSystem> Module<S> {
                     )));
                 }
                 Some(Symbol::Expr(expr)) => {
-                    if expr.evaluate(&self.symtab).is_none() {
+                    if expr.evaluate(&self.symtab, &self.str_interner).is_none() {
                         return Err(LinkerError(format!(
                             "In \"{}\"\n\n{}:{}:{}: Undefined symbol: \"{label}\"",
                             path.display(),
@@ -137,7 +137,7 @@ impl<S: FileSystem> Module<S> {
                 Link::Byte {
                     loc, offset, expr, ..
                 } => {
-                    if let Some(value) = expr.evaluate(&self.symtab) {
+                    if let Some(value) = expr.evaluate(&self.symtab, &self.str_interner) {
                         if (value as u32) > (u8::MAX as u32) {
                             let path = self.file_manager.path(loc.pathref).unwrap();
                             return Err(LinkerError(format!(
@@ -163,7 +163,7 @@ impl<S: FileSystem> Module<S> {
                 Link::SignedByte {
                     loc, offset, expr, ..
                 } => {
-                    if let Some(value) = expr.evaluate(&self.symtab) {
+                    if let Some(value) = expr.evaluate(&self.symtab, &self.str_interner) {
                         if (value < (i8::MIN as i32)) || (value > (i8::MAX as i32)) {
                             let path = self.file_manager.path(loc.pathref).unwrap();
                             return Err(LinkerError(format!(
@@ -189,7 +189,7 @@ impl<S: FileSystem> Module<S> {
                 Link::Word {
                     loc, offset, expr, ..
                 } => {
-                    if let Some(value) = expr.evaluate(&self.symtab) {
+                    if let Some(value) = expr.evaluate(&self.symtab, &self.str_interner) {
                         if (value as u32) > (u16::MAX as u32) {
                             let path = self.file_manager.path(loc.pathref).unwrap();
                             return Err(LinkerError(format!(
@@ -221,7 +221,7 @@ impl<S: FileSystem> Module<S> {
                     expr,
                     ..
                 } => {
-                    if let Some(value) = expr.evaluate(&self.symtab) {
+                    if let Some(value) = expr.evaluate(&self.symtab, &self.str_interner) {
                         if (value as u32) > (u8::MAX as u32) {
                             let path = self.file_manager.path(loc.pathref).unwrap();
                             return Err(LinkerError(format!(
@@ -247,7 +247,7 @@ impl<S: FileSystem> Module<S> {
                     }
                 }
                 Link::Assert { loc, msg, expr, .. } => {
-                    if let Some(value) = expr.evaluate(&self.symtab) {
+                    if let Some(value) = expr.evaluate(&self.symtab, &self.str_interner) {
                         if value == 0 {
                             let path = self.file_manager.path(loc.pathref).unwrap();
                             if let Some(msg) = msg {

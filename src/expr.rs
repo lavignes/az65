@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     intern::{StrInterner, StrRef},
     symtab::{Symbol, Symtab},
@@ -7,6 +9,7 @@ use crate::{
 pub enum ExprNode {
     Value(i32),
     Label(StrRef),
+    SizeOf(StrRef),
     Invert,
     NotLogical,
     Neg,
@@ -51,7 +54,11 @@ impl Expr {
         self.nodes.push(node);
     }
 
-    pub fn evaluate(&self, symtab: &Symtab, str_interner: &StrInterner) -> Option<i32> {
+    pub fn evaluate(
+        &self,
+        symtab: &Symtab,
+        str_interner: &Rc<RefCell<StrInterner>>,
+    ) -> Option<i32> {
         let mut stack = Vec::new();
         for &node in &self.nodes {
             match node {
@@ -60,6 +67,16 @@ impl Expr {
                     Symbol::Value(value) => stack.push(*value),
                     Symbol::Expr(expr) => stack.push(expr.evaluate(symtab, str_interner)?),
                 },
+                ExprNode::SizeOf(strref) => {
+                    let meta = symtab.get(strref)?.meta();
+                    let meta = symtab.meta_interner().get(meta)?;
+                    let interner = str_interner.as_ref().borrow();
+                    let meta = meta
+                        .iter()
+                        .find(|[key, _]| interner.eq_some("@SIZEOF", *key))?;
+                    let value = interner.get(meta[1]).unwrap();
+                    stack.push(i32::from_str_radix(value, 10).unwrap());
+                }
                 ExprNode::Invert => {
                     let value = stack.pop().unwrap();
                     stack.push(!value);
