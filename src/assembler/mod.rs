@@ -1670,7 +1670,12 @@ where
                         return Ok(loc);
                     }
 
-                    _ => return asm_err!(loc, "\"{name}\" directives are allowed in expressions"),
+                    _ => {
+                        return asm_err!(
+                            loc,
+                            "\"{name}\" directives are not allowed in expressions"
+                        )
+                    }
                 },
                 Some(Token::Label { loc, kind, value }) => {
                     self.next()?;
@@ -1689,7 +1694,7 @@ where
                             } else {
                                 let interner = self.str_interner.as_ref().borrow();
                                 let label = interner.get(value).unwrap();
-                                return asm_err!(loc, "The local label \"{label}\" is being defined but there was no global label defined before it");
+                                return asm_err!(loc, "The local label \"{label}\" is being evaluated but there was no global label defined before it");
                             }
                         }
                     };
@@ -1974,7 +1979,8 @@ where
 
                             self.expect_symbol(SymbolName::Comma)?;
                             let (_, expr) = self.expr()?;
-                            self.symtab.insert_no_meta(direct, Symbol::Expr(expr));
+                            self.symtab
+                                .insert_with_meta(direct, Symbol::Expr(expr), &[]);
                         }
 
                         DirectiveName::ReDefl => {
@@ -2054,7 +2060,8 @@ where
 
                             self.expect_symbol(SymbolName::Comma)?;
                             let (_, expr) = self.expr()?;
-                            self.symtab.insert_no_meta(direct, Symbol::Expr(expr));
+                            self.symtab
+                                .insert_with_meta(direct, Symbol::Expr(expr), &[]);
                         }
 
                         DirectiveName::UnDef => {
@@ -2635,9 +2642,10 @@ where
                                                             );
                                                 }
                                                 (_, Some(field_size)) => {
-                                                    self.symtab.insert_no_meta(
+                                                    self.symtab.insert_with_meta(
                                                         direct,
                                                         Symbol::Value(struct_size),
+                                                        &[],
                                                     );
                                                     struct_size =
                                                         struct_size.wrapping_add(field_size);
@@ -2656,7 +2664,7 @@ where
                             }
                             self.active_namespace = old_namespace;
                             self.symtab
-                                .insert_no_meta(value, Symbol::Value(struct_size));
+                                .insert_with_meta(value, Symbol::Value(struct_size), &[]);
                         }
 
                         DirectiveName::Align => {

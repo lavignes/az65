@@ -1,4 +1,4 @@
-use std::{cell::Ref, io::Write, marker::PhantomData, path::Path};
+use std::{io::Write, marker::PhantomData, path::Path};
 
 use fxhash::FxHashMap;
 
@@ -31,7 +31,7 @@ where
     fn export(
         &mut self,
         file_manager: &mut FileManager<Self::FileSystem>,
-        str_interner: Ref<StrInterner>,
+        str_interner: &StrInterner,
         symtab: &Symtab,
         cwd: &Path,
         path: &Path,
@@ -80,31 +80,27 @@ where
 
             if let Some(bank) = bank {
                 if rom {
-                    rom_banks.entry(bank).or_insert_with(Vec::new);
                     rom_banks
-                        .get_mut(&bank)
-                        .unwrap()
+                        .entry(bank)
+                        .or_insert_with(Vec::new)
                         .push((strref, value as u16));
                 }
                 if wram {
-                    wram_banks.entry(bank).or_insert_with(Vec::new);
                     wram_banks
-                        .get_mut(&bank)
-                        .unwrap()
+                        .entry(bank)
+                        .or_insert_with(Vec::new)
                         .push((strref, value as u16));
                 }
                 if sram {
-                    sram_banks.entry(bank).or_insert_with(Vec::new);
                     sram_banks
-                        .get_mut(&bank)
-                        .unwrap()
+                        .entry(bank)
+                        .or_insert_with(Vec::new)
                         .push((strref, value as u16));
                 }
                 if vram {
-                    vram_banks.entry(bank).or_insert_with(Vec::new);
                     vram_banks
-                        .get_mut(&bank)
-                        .unwrap()
+                        .entry(bank)
+                        .or_insert_with(Vec::new)
                         .push((strref, value as u16));
                 }
             }

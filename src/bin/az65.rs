@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     env,
     fs::{self, File},
     io::{self, Write},
@@ -167,7 +168,7 @@ fn main() -> ExitCode {
                 let mut nl = NameList::new();
                 if let Err(e) = nl.export(
                     &mut file_manager,
-                    str_interner.as_ref().borrow(),
+                    str_interner.as_ref().borrow().borrow(),
                     &symtab,
                     full_cwd.as_path(),
                     &path,
@@ -184,7 +185,7 @@ fn main() -> ExitCode {
                 let mut sym = Sym::new();
                 if let Err(e) = sym.export(
                     &mut file_manager,
-                    str_interner.as_ref().borrow(),
+                    str_interner.as_ref().borrow().borrow(),
                     &symtab,
                     full_cwd.as_path(),
                     &path,
@@ -198,7 +199,7 @@ fn main() -> ExitCode {
                 let mut meta = AZ65Meta::new();
                 if let Err(e) = meta.export(
                     &mut file_manager,
-                    str_interner.as_ref().borrow(),
+                    str_interner.as_ref().borrow().borrow(),
                     &symtab,
                     full_cwd.as_path(),
                     &path,

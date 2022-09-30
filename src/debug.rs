@@ -1,4 +1,4 @@
-use std::{cell::Ref, io::Write, marker::PhantomData, path::Path};
+use std::{io::Write, marker::PhantomData, path::Path};
 
 use fxhash::FxHashMap;
 
@@ -25,7 +25,7 @@ pub trait DebugExporter {
     fn export(
         &mut self,
         file_manager: &mut FileManager<Self::FileSystem>,
-        str_interner: Ref<StrInterner>,
+        str_interner: &StrInterner,
         symtab: &Symtab,
         cwd: &Path,
         path: &Path,
@@ -61,7 +61,7 @@ where
     fn export(
         &mut self,
         file_manager: &mut FileManager<Self::FileSystem>,
-        str_interner: Ref<StrInterner>,
+        str_interner: &StrInterner,
         symtab: &Symtab,
         cwd: &Path,
         path: &Path,

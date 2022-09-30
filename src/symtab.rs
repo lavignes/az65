@@ -74,14 +74,14 @@ impl Symtab {
     }
 
     #[inline]
-    pub fn insert_no_meta(&mut self, key: StrRef, value: Symbol) -> Option<MetaSymbol> {
-        self.inner.insert(
-            key,
-            MetaSymbol {
-                inner: value,
-                meta: self.meta_interner.intern(&[]),
-            },
-        )
+    pub fn insert_with_meta<M: AsRef<[[StrRef; 2]]>>(
+        &mut self,
+        key: StrRef,
+        value: Symbol,
+        meta: M,
+    ) -> Option<MetaSymbol> {
+        let meta = self.meta_interner.intern(meta.as_ref());
+        self.inner.insert(key, MetaSymbol { inner: value, meta })
     }
 
     #[inline]

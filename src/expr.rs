@@ -1,5 +1,5 @@
 use crate::{
-    intern::StrRef,
+    intern::{StrInterner, StrRef},
     symtab::{Symbol, Symtab},
 };
 
@@ -51,14 +51,14 @@ impl Expr {
         self.nodes.push(node);
     }
 
-    pub fn evaluate(&self, symtab: &Symtab) -> Option<i32> {
+    pub fn evaluate(&self, symtab: &Symtab, str_interner: &StrInterner) -> Option<i32> {
         let mut stack = Vec::new();
         for &node in &self.nodes {
             match node {
                 ExprNode::Value(value) => stack.push(value),
                 ExprNode::Label(strref) => match symtab.get(strref)?.inner() {
                     Symbol::Value(value) => stack.push(*value),
-                    Symbol::Expr(expr) => stack.push(expr.evaluate(symtab)?),
+                    Symbol::Expr(expr) => stack.push(expr.evaluate(symtab, str_interner)?),
                 },
                 ExprNode::Invert => {
                     let value = stack.pop().unwrap();
