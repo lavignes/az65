@@ -396,7 +396,7 @@ fn structs2() {
             @endstruct
 
             @macro SIZEOF, 1
-                @@parse @@metaget @1, "@SIZEOF"
+                @@parse @@getmeta @1, "@SIZEOF"
             @endmacro
             
             @assert 2 == SIZEOF MyStruct.field1
@@ -665,7 +665,7 @@ fn parse() {
 }
 
 #[test]
-fn metaget() {
+fn getmeta() {
     let assembler = assembler(&[(
         "/test.asm",
         r##"
@@ -674,7 +674,7 @@ fn metaget() {
                nop
 
            @macro BANK_OF, 1
-               @@parse @@string { "$" @@metaget @1, "BANK" }
+               @@parse @@string { "$" @@getmeta @1, "BANK" }
            @endmacro
 
            @db BANK_OF mylabel

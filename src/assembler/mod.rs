@@ -361,7 +361,7 @@ where
 
                             Some(Token::Directive {
                                 loc,
-                                name: DirectiveName::MetaGet,
+                                name: DirectiveName::GetMeta,
                             }) => {
                                 let direct = match self.next()? {
                                     None => return self.end_of_input_err(),
