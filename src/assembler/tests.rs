@@ -159,9 +159,9 @@ fn macros2() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
-            @macro test, 1
+            @macro test, 1, Arg1
                 nop
-                @1
+                Arg1
                 nop
                 @dw @here
             @endmacro
@@ -190,11 +190,11 @@ fn macros3() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
-            @macro test, 2
+            @macro test, 2, Arg1, Arg2
                 nop
-                @1
-                @1
-                @2
+                Arg1
+                Arg1
+                Arg2
                 nop
                 @dw @here
             @endmacro
@@ -226,9 +226,9 @@ fn macros4() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
-            @macro test, 1
+            @macro test, 1, Arg1
                 nop
-                @1
+                Arg1
                 nop
                 @dw @here
             @endmacro
@@ -260,8 +260,8 @@ fn macros5() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
-            @macro test1, 1
-                @1
+            @macro test1, 1, Arg1
+                Arg1
             @endmacro
 
             @macro test2, 0
@@ -297,9 +297,9 @@ fn macros6() {
         "/test.asm",
         r#"
             @macro test2, 0
-                @@macro test1, 1
-                    @@1
-                @@endmacro
+                @macro test1, 1, Arg1
+                    Arg1
+                @endmacro
 
                 nop
                 test1 nop
@@ -334,8 +334,8 @@ fn macros7() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
-            @macro ASSERT_EQ, 2
-                @assert @1 == @2
+            @macro ASSERT_EQ, 2, Lhs, Rhs
+                @assert Lhs == Rhs
             @endmacro
 
             ASSERT_EQ 4, { 2 + 2 }
@@ -376,6 +376,8 @@ fn structs1() {
 
 #[test]
 fn structs2() {
+    // TODO: This sucks. lexers always emit a new line as a hack
+    //   which terminates the assert expression early..
     let assembler = assembler(&[(
         "/test.asm",
         r#"
@@ -395,10 +397,11 @@ fn structs2() {
                 field4 1
             @endstruct
 
-            @macro SIZEOF, 1
-                @@parse @@getmeta @1, "@SIZEOF"
+            @macro SIZEOF, 1, Label
+                @parse @getmeta Label, "@SIZEOF"
             @endmacro
-            
+
+            ; order matters here (see TODO above)
             @assert 2 == SIZEOF MyStruct.field1
         "#,
     )]);
@@ -465,8 +468,8 @@ fn stringify2() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
-            @macro escaped_string, 1
-                @echo @@string { @1 }
+            @macro escaped_string, 1, Arg
+                @echo @string { Arg }
             @endmacro
 
             escaped_string { 1 + 2 + 3 }
@@ -486,16 +489,17 @@ fn each() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
-            @macro MAKE_TABLE, 2
-                @@label { @1 Lo }
-                @@each { @2 }
-                    @db <(@@1)
-                @@endeach
+            @macro MAKE_TABLE, 2, Prefix, Entries
+                @label { Prefix Lo }
 
-                @@label { @1 Hi }
-                @@each { @2 }
-                    @db >(@@1)
-                @@endeach
+                @each Entry, { Entries }
+                    @db <(Entry)
+                @endeach
+
+                @label { Prefix Hi }
+                @each Entry, { Entries }
+                    @db >(Entry)
+                @endeach
             @endmacro
 
             @defl First, $1234
@@ -529,94 +533,19 @@ fn each() {
 }
 
 #[test]
-fn control_flow() {
-    let assembler = assembler(&[(
-        "/test.asm",
-        r#"
-           @each { @count !@isdef STDMACROS_INC }
-               @@defn STDMACROS_INC, 0
-
-               @@macro REPEAT, 2
-                   @@@each { @@@count (@@1) }
-                       @@2
-                   @@@endeach
-               @@endmacro
-
-               @@macro IF, 2
-                   @@@each { @@@count (@@1) != 0 }
-                       @@2
-                   @@@endeach
-               @@endmacro
-
-               @@macro IF_ELSE, 3
-                   @@@each { @@@count (@@1) != 0 }
-                       @@2
-                   @@@endeach
-                   @@@each { @@@count (@@1) == 0 }
-                       @@3
-                   @@@endeach
-               @@endmacro
-
-               @@macro ONCE, 2
-                   @@@each { @@@count !@@@isdef @@1 }
-                       @@@defn @@1, 0
-                       @@2
-                   @@@endeach
-               @@endmacro
-           @endeach
-
-           REPEAT 3, {
-               nop
-           }
-
-           IF { !@isdef Test }, {
-               @echo "not defined"
-           }
-
-           @assert !@isdef Test
-           @defn Test, 2
-           @assert @isdef Test
-
-           IF_ELSE { !@isdef Test }, {
-               @echo "not defined"
-           }, {
-               @echo "defined"
-           }
-
-           ONCE _tok, { }
-           ONCE _tok, { @die "impossible" }
-        "#,
-    )]);
-
-    let mut data = Vec::new();
-    assembler
-        .assemble("/", "test.asm")
-        .unwrap()
-        .link(&mut data)
-        .unwrap();
-
-    #[rustfmt::skip]
-    assert_eq!(vec![
-        0x00,
-        0x00,
-        0x00,
-    ], data);
-}
-
-#[test]
 fn if_directive() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
             @if ! @isdef TEST
                 nop
-            @endif 
-            
+            @endif
+
             @defn TEST, 1
 
             @if ! @isdef TEST
                 @die "impossible!"
-            @endif 
+            @endif
 
             @if @isdef TEST
                 @if ! @isdef FOO
@@ -673,8 +602,8 @@ fn getmeta() {
            mylabel:
                nop
 
-           @macro BANK_OF, 1
-               @@parse @@string { "$" @@getmeta @1, "BANK" }
+           @macro BANK_OF, 1, Label
+               @parse @string { "$" @getmeta Label, "BANK" }
            @endmacro
 
            @db BANK_OF mylabel
@@ -800,7 +729,7 @@ fn addr_segment() {
             @db
             @dw
             @ds 3
-            
+
             @segment "CODE"
             @dw @here
         "#,

@@ -92,18 +92,7 @@ impl<R: Read, A: ArchTokens> TokenSource<R, A> {
                             return Some(Ok(tok));
                         }
 
-                        MacroToken::Argument { loc, index } => {
-                            if index >= mac.args {
-                                let interner = state.str_interner.as_ref().borrow();
-                                let name = interner.get(state.name).unwrap();
-                                let index = index + 1;
-                                return Some(asm_err!(
-                                    loc,
-                                    "Unexpected argument index: ({index}), the macro \"{name}\" takes {} arguments",
-                                    mac.args
-                                ));
-                            }
-
+                        MacroToken::Argument { index, .. } => {
                             state.expanding_macro_arg = Some(index);
                             state.macro_arg_offset = 0;
                             continue;
@@ -122,9 +111,8 @@ enum MacroToken<A: ArchTokens> {
 }
 
 struct Macro<A: ArchTokens> {
-    #[allow(dead_code)]
     loc: SourceLoc,
-    args: usize,
+    args: Vec<StrRef>,
     tokens: Vec<MacroToken<A>>,
 }
 
@@ -323,270 +311,285 @@ where
                                     continue;
                                 }
                             }
-                        }
 
-                        // Check for any of the macro-like directives
-                        match tok {
-                            Some(Token::Directive {
-                                loc,
-                                name: DirectiveName::String,
-                            }) => {
-                                self.stash = Some(self.expect_string_directive_arg(loc)?);
-                                self.loc = Some(loc);
-                                continue;
-                            }
-
-                            Some(Token::Directive {
-                                loc,
-                                name: DirectiveName::Label,
-                            }) => {
-                                self.stash = Some(self.expect_label_directive_arg(loc)?);
-                                self.loc = Some(loc);
-                                continue;
-                            }
-
-                            Some(Token::Directive {
-                                loc,
-                                name: DirectiveName::Count,
-                            }) => {
-                                let mac = self.expect_count_directive(loc)?;
-
-                                self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.unwrap());
-
-                                self.token_sources.push(TokenSource::Macro(mac));
-                                self.cwds.push(self.cwd.take().unwrap());
-                                continue;
-                            }
-
-                            Some(Token::Directive {
-                                loc,
-                                name: DirectiveName::GetMeta,
-                            }) => {
-                                let direct = match self.next()? {
-                                    None => return self.end_of_input_err(),
-
-                                    Some(Token::Label { loc, value, kind }) => match kind {
-                                        LabelKind::Global | LabelKind::Direct => value,
-
-                                        LabelKind::Local => {
-                                            if let Some(namespace) = self.active_namespace {
-                                                let global_label = {
-                                                    let interner =
-                                                        self.str_interner.as_ref().borrow();
-                                                    let global = interner.get(namespace).unwrap();
-                                                    let label = interner.get(value).unwrap();
-                                                    format!("{global}{label}")
-                                                };
-                                                self.str_interner.borrow_mut().intern(global_label)
-                                            } else {
-                                                let interner = self.str_interner.as_ref().borrow();
-                                                let label = interner.get(value).unwrap();
-                                                return asm_err!(loc, "The local symbol \"{label}\" is being read but there was no global label defined before it");
-                                            }
-                                        }
-                                    },
-
-                                    Some(tok) => {
-                                        return asm_err!(
-                                            tok.loc(),
-                                            "Unexpected {}, expected a label",
-                                            tok.as_display(&self.str_interner)
-                                        )
-                                    }
-                                };
-
-                                self.expect_symbol(SymbolName::Comma)?;
-
-                                let key = match self.next()? {
-                                    None => return self.end_of_input_err(),
-                                    Some(Token::String { value, .. }) => value,
-                                    Some(tok) => {
-                                        return asm_err!(
-                                            tok.loc(),
-                                            "Unexpected {}, expected a metadata key",
-                                            tok.as_display(&self.str_interner)
-                                        );
-                                    }
-                                };
-
-                                let mut toks = Vec::new();
-                                if let Some(sym) = self.symtab.get(direct) {
-                                    if let Some(meta) = self.symtab.meta_interner().get(sym.meta())
-                                    {
-                                        for item in meta {
-                                            if item[0] == key {
-                                                toks.push(MacroToken::Token(Token::String {
-                                                    loc,
-                                                    value: item[1],
-                                                }));
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    let mut interner = self.str_interner.borrow_mut();
-                                    let value = interner.intern("");
-                                    toks.push(MacroToken::Token(Token::String { loc, value }));
-                                }
-
-                                let name = self
-                                    .str_interner
-                                    .borrow_mut()
-                                    .intern(format!("@metaget Invocation{}", self.entropy));
-                                self.entropy += 1;
-                                self.macros.insert(
-                                    name,
-                                    Macro {
-                                        loc,
-                                        args: 0,
-                                        tokens: toks,
-                                    },
-                                );
-
-                                self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.unwrap());
-
-                                self.token_sources.push(TokenSource::Macro(MacroState {
-                                    name,
-                                    args: Vec::new(),
-                                    macro_offset: 0,
-                                    expanding_macro_arg: None,
-                                    macro_arg_offset: 0,
+                            // Check for any of the macro-like directives
+                            match tok {
+                                Some(Token::Directive {
                                     loc,
-                                    included_from: Some(loc),
-                                    str_interner: self.str_interner.clone(),
-                                }));
-                                self.cwds.push(self.cwd.take().unwrap());
-                                continue;
-                            }
-
-                            Some(Token::Directive {
-                                loc,
-                                name: DirectiveName::Parse,
-                            }) => {
-                                let reader = match self.next()? {
-                                    None => return self.end_of_input_err(),
-                                    Some(Token::String { value, .. }) => {
-                                        let interner = self.str_interner.as_ref().borrow();
-                                        // TODO: Not really efficient to clone. but /shrug
-                                        Cursor::new(interner.get(value).unwrap().to_owned())
-                                    }
-                                    Some(tok) => {
-                                        return asm_err!(
-                                            tok.loc(),
-                                            "Unexpected {}, expected a string to parse",
-                                            tok.as_display(&self.str_interner)
-                                        )
-                                    }
-                                };
-
-                                self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.unwrap());
-
-                                self.token_sources.push(TokenSource::ParseLexer(Lexer::new(
-                                    self.str_interner.clone(),
-                                    Some(loc),
-                                    loc.pathref,
-                                    reader,
-                                )));
-                                self.cwds.push(self.cwd.take().unwrap());
-                                continue;
-                            }
-
-                            Some(Token::Directive {
-                                loc,
-                                name: DirectiveName::Each,
-                            }) => {
-                                let mut states = self.expect_each_directive(loc)?;
-                                self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.unwrap());
-
-                                for _ in 0..states.len() {
-                                    self.cwds.push(self.cwd.unwrap());
+                                    name: DirectiveName::String,
+                                }) => {
+                                    self.stash = Some(self.expect_string_directive_arg(loc)?);
+                                    self.loc = Some(loc);
+                                    continue;
                                 }
-                                self.cwd = None;
-                                self.token_sources
-                                    .extend(states.drain(..).rev().map(TokenSource::Macro));
-                                continue;
-                            }
 
-                            Some(Token::Directive {
-                                loc,
-                                name: DirectiveName::Hex,
-                            }) => {
-                                let mac =
-                                    self.expect_number_directive_arg(loc, DirectiveName::Hex, 16)?;
+                                Some(Token::Directive {
+                                    loc,
+                                    name: DirectiveName::Label,
+                                }) => {
+                                    self.stash = Some(self.expect_label_directive_arg(loc)?);
+                                    self.loc = Some(loc);
+                                    continue;
+                                }
 
-                                self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.unwrap());
+                                Some(Token::Directive {
+                                    loc,
+                                    name: DirectiveName::Count,
+                                }) => {
+                                    let mac = self.expect_count_directive(loc)?;
 
-                                self.token_sources.push(TokenSource::Macro(mac));
-                                self.cwds.push(self.cwd.take().unwrap());
-                                continue;
-                            }
+                                    self.token_sources.push(self.token_source.take().unwrap());
+                                    self.cwds.push(self.cwd.unwrap());
 
-                            Some(Token::Directive {
-                                loc,
-                                name: DirectiveName::Bin,
-                            }) => {
-                                let mac =
-                                    self.expect_number_directive_arg(loc, DirectiveName::Bin, 2)?;
+                                    self.token_sources.push(TokenSource::Macro(mac));
+                                    self.cwds.push(self.cwd.take().unwrap());
+                                    continue;
+                                }
 
-                                self.token_sources.push(self.token_source.take().unwrap());
-                                self.cwds.push(self.cwd.unwrap());
+                                Some(Token::Directive {
+                                    loc,
+                                    name: DirectiveName::GetMeta,
+                                }) => {
+                                    let direct = match self.next()? {
+                                        None => return self.end_of_input_err(),
 
-                                self.token_sources.push(TokenSource::Macro(mac));
-                                self.cwds.push(self.cwd.take().unwrap());
-                                continue;
-                            }
+                                        Some(Token::Label { loc, value, kind }) => match kind {
+                                            LabelKind::Global | LabelKind::Direct => value,
 
-                            Some(Token::Directive {
-                                loc,
-                                name: DirectiveName::IsDef,
-                            }) => {
-                                let direct = match self.next()? {
-                                    None => return self.end_of_input_err(),
-
-                                    Some(Token::Label { loc, value, kind }) => match kind {
-                                        LabelKind::Global | LabelKind::Direct => value,
-
-                                        LabelKind::Local => {
-                                            if let Some(namespace) = self.active_namespace {
-                                                let global_label = {
+                                            LabelKind::Local => {
+                                                if let Some(namespace) = self.active_namespace {
+                                                    let global_label = {
+                                                        let interner =
+                                                            self.str_interner.as_ref().borrow();
+                                                        let global =
+                                                            interner.get(namespace).unwrap();
+                                                        let label = interner.get(value).unwrap();
+                                                        format!("{global}{label}")
+                                                    };
+                                                    self.str_interner
+                                                        .borrow_mut()
+                                                        .intern(global_label)
+                                                } else {
                                                     let interner =
                                                         self.str_interner.as_ref().borrow();
-                                                    let global = interner.get(namespace).unwrap();
                                                     let label = interner.get(value).unwrap();
-                                                    format!("{global}{label}")
-                                                };
-                                                self.str_interner.borrow_mut().intern(global_label)
-                                            } else {
-                                                let interner = self.str_interner.as_ref().borrow();
-                                                let label = interner.get(value).unwrap();
-                                                return asm_err!(loc, "The local symbol \"{label}\" is being read but there was no global label defined before it");
+                                                    return asm_err!(loc, "The local symbol \"{label}\" is being read but there was no global label defined before it");
+                                                }
+                                            }
+                                        },
+
+                                        Some(tok) => {
+                                            return asm_err!(
+                                                tok.loc(),
+                                                "Unexpected {}, expected a label",
+                                                tok.as_display(&self.str_interner)
+                                            )
+                                        }
+                                    };
+
+                                    self.expect_symbol(SymbolName::Comma)?;
+
+                                    let key = match self.next()? {
+                                        None => return self.end_of_input_err(),
+                                        Some(Token::String { value, .. }) => value,
+                                        Some(tok) => {
+                                            return asm_err!(
+                                                tok.loc(),
+                                                "Unexpected {}, expected a metadata key",
+                                                tok.as_display(&self.str_interner)
+                                            );
+                                        }
+                                    };
+
+                                    let mut toks = Vec::new();
+                                    if let Some(sym) = self.symtab.get(direct) {
+                                        if let Some(meta) =
+                                            self.symtab.meta_interner().get(sym.meta())
+                                        {
+                                            for item in meta {
+                                                if item[0] == key {
+                                                    toks.push(MacroToken::Token(Token::String {
+                                                        loc,
+                                                        value: item[1],
+                                                    }));
+                                                }
                                             }
                                         }
-                                    },
-
-                                    Some(tok) => {
-                                        return asm_err!(
-                                            tok.loc(),
-                                            "Unexpected {}, expected a label",
-                                            tok.as_display(&self.str_interner)
-                                        )
+                                    } else {
+                                        let mut interner = self.str_interner.borrow_mut();
+                                        let value = interner.intern("");
+                                        toks.push(MacroToken::Token(Token::String { loc, value }));
                                     }
-                                };
-                                let value = if self.symtab.get(direct).is_some() {
-                                    1
-                                } else {
-                                    0
-                                };
-                                self.stash = Some(Token::Number { loc, value });
-                                self.loc = Some(loc);
-                                continue;
-                            }
 
-                            _ => {}
+                                    let name = self
+                                        .str_interner
+                                        .borrow_mut()
+                                        .intern(format!("@metaget Invocation{}", self.entropy));
+                                    self.entropy += 1;
+                                    self.macros.insert(
+                                        name,
+                                        Macro {
+                                            loc,
+                                            args: Vec::new(),
+                                            tokens: toks,
+                                        },
+                                    );
+
+                                    self.token_sources.push(self.token_source.take().unwrap());
+                                    self.cwds.push(self.cwd.unwrap());
+
+                                    self.token_sources.push(TokenSource::Macro(MacroState {
+                                        name,
+                                        args: Vec::new(),
+                                        macro_offset: 0,
+                                        expanding_macro_arg: None,
+                                        macro_arg_offset: 0,
+                                        loc,
+                                        included_from: Some(loc),
+                                        str_interner: self.str_interner.clone(),
+                                    }));
+                                    self.cwds.push(self.cwd.take().unwrap());
+                                    continue;
+                                }
+
+                                Some(Token::Directive {
+                                    loc,
+                                    name: DirectiveName::Parse,
+                                }) => {
+                                    let reader = match self.next()? {
+                                        None => return self.end_of_input_err(),
+                                        Some(Token::String { value, .. }) => {
+                                            let interner = self.str_interner.as_ref().borrow();
+                                            // TODO: Not really efficient to clone. but /shrug
+                                            Cursor::new(interner.get(value).unwrap().to_owned())
+                                        }
+                                        Some(tok) => {
+                                            return asm_err!(
+                                                tok.loc(),
+                                                "Unexpected {}, expected a string to parse",
+                                                tok.as_display(&self.str_interner)
+                                            )
+                                        }
+                                    };
+
+                                    self.token_sources.push(self.token_source.take().unwrap());
+                                    self.cwds.push(self.cwd.unwrap());
+
+                                    self.token_sources.push(TokenSource::ParseLexer(Lexer::new(
+                                        self.str_interner.clone(),
+                                        Some(loc),
+                                        loc.pathref,
+                                        reader,
+                                    )));
+                                    self.cwds.push(self.cwd.take().unwrap());
+                                    continue;
+                                }
+
+                                Some(Token::Directive {
+                                    loc,
+                                    name: DirectiveName::Each,
+                                }) => {
+                                    let mut states = self.expect_each_directive(loc)?;
+                                    self.token_sources.push(self.token_source.take().unwrap());
+                                    self.cwds.push(self.cwd.unwrap());
+
+                                    for _ in 0..states.len() {
+                                        self.cwds.push(self.cwd.unwrap());
+                                    }
+                                    self.cwd = None;
+                                    self.token_sources
+                                        .extend(states.drain(..).rev().map(TokenSource::Macro));
+                                    continue;
+                                }
+
+                                Some(Token::Directive {
+                                    loc,
+                                    name: DirectiveName::Hex,
+                                }) => {
+                                    let mac = self.expect_number_directive_arg(
+                                        loc,
+                                        DirectiveName::Hex,
+                                        16,
+                                    )?;
+
+                                    self.token_sources.push(self.token_source.take().unwrap());
+                                    self.cwds.push(self.cwd.unwrap());
+
+                                    self.token_sources.push(TokenSource::Macro(mac));
+                                    self.cwds.push(self.cwd.take().unwrap());
+                                    continue;
+                                }
+
+                                Some(Token::Directive {
+                                    loc,
+                                    name: DirectiveName::Bin,
+                                }) => {
+                                    let mac = self.expect_number_directive_arg(
+                                        loc,
+                                        DirectiveName::Bin,
+                                        2,
+                                    )?;
+
+                                    self.token_sources.push(self.token_source.take().unwrap());
+                                    self.cwds.push(self.cwd.unwrap());
+
+                                    self.token_sources.push(TokenSource::Macro(mac));
+                                    self.cwds.push(self.cwd.take().unwrap());
+                                    continue;
+                                }
+
+                                Some(Token::Directive {
+                                    loc,
+                                    name: DirectiveName::IsDef,
+                                }) => {
+                                    let direct = match self.next()? {
+                                        None => return self.end_of_input_err(),
+
+                                        Some(Token::Label { loc, value, kind }) => match kind {
+                                            LabelKind::Global | LabelKind::Direct => value,
+
+                                            LabelKind::Local => {
+                                                if let Some(namespace) = self.active_namespace {
+                                                    let global_label = {
+                                                        let interner =
+                                                            self.str_interner.as_ref().borrow();
+                                                        let global =
+                                                            interner.get(namespace).unwrap();
+                                                        let label = interner.get(value).unwrap();
+                                                        format!("{global}{label}")
+                                                    };
+                                                    self.str_interner
+                                                        .borrow_mut()
+                                                        .intern(global_label)
+                                                } else {
+                                                    let interner =
+                                                        self.str_interner.as_ref().borrow();
+                                                    let label = interner.get(value).unwrap();
+                                                    return asm_err!(loc, "The local symbol \"{label}\" is being read but there was no global label defined before it");
+                                                }
+                                            }
+                                        },
+
+                                        Some(tok) => {
+                                            return asm_err!(
+                                                tok.loc(),
+                                                "Unexpected {}, expected a label",
+                                                tok.as_display(&self.str_interner)
+                                            )
+                                        }
+                                    };
+                                    let value = if self.symtab.get(direct).is_some() {
+                                        1
+                                    } else {
+                                        0
+                                    };
+                                    self.stash = Some(Token::Number { loc, value });
+                                    self.loc = Some(loc);
+                                    continue;
+                                }
+
+                                _ => {}
+                            }
                         }
 
                         self.stash = tok;
@@ -767,7 +770,7 @@ where
         name: StrRef,
     ) -> Result<MacroState<A>, (SourceLoc, AssemblerError)> {
         let mut args = Vec::new();
-        let arg_count = self.macros.get(&name).unwrap().args;
+        let arg_count = self.macros.get(&name).unwrap().args.len();
         let loc = self.loc();
 
         for i in 0..arg_count {
@@ -950,7 +953,7 @@ where
             name,
             Macro {
                 loc,
-                args: 0,
+                args: Vec::new(),
                 tokens: toks,
             },
         );
@@ -1015,7 +1018,7 @@ where
             name,
             Macro {
                 loc,
-                args: 0,
+                args: Vec::new(),
                 tokens: toks,
             },
         );
@@ -1138,6 +1141,32 @@ where
         &mut self,
         loc: SourceLoc,
     ) -> Result<Vec<MacroState<A>>, (SourceLoc, AssemblerError)> {
+        let arg_value = match self.next()? {
+            None => return self.end_of_input_err(),
+
+            Some(Token::Label { loc, kind, value }) => {
+                let interner = self.str_interner.as_ref().borrow();
+                let str_value = interner.get(value).unwrap();
+                if kind != LabelKind::Global {
+                    return asm_err!(
+                        loc,
+                        "\"@each\" label \"{str_value}\" must be a global label",
+                    );
+                }
+                value
+            }
+
+            Some(tok) => {
+                return asm_err!(
+                    tok.loc(),
+                    "Unexpected {}, expected an \"@each\" token placeholder name",
+                    tok.as_display(&self.str_interner)
+                );
+            }
+        };
+
+        self.expect_symbol(SymbolName::Comma)?;
+
         let mut args = Vec::new();
         let mut brace_depth = 0;
         loop {
@@ -1197,39 +1226,10 @@ where
                     break;
                 }
 
-                Some(Token::NestedDirective { loc, level, name }) => {
-                    if level <= 2 {
-                        toks.push(MacroToken::Token(Token::Directive { loc, name }));
-                    } else {
-                        toks.push(MacroToken::Token(Token::NestedDirective {
-                            loc,
-                            level: level - 1,
-                            name,
-                        }));
-                    }
-                }
-
-                Some(Token::MacroArg { loc, value }) => {
-                    if value == 0 {
-                        todo!("need error message");
-                    } else {
-                        toks.push(MacroToken::Argument {
-                            loc,
-                            index: value as usize - 1,
-                        });
-                    }
-                }
-
-                Some(Token::NestedMacroArg { loc, level, value }) => {
-                    if level <= 2 {
-                        toks.push(MacroToken::Token(Token::MacroArg { loc, value }));
-                    } else {
-                        toks.push(MacroToken::Token(Token::NestedMacroArg {
-                            loc,
-                            level: level - 1,
-                            value,
-                        }));
-                    }
+                Some(Token::Label { loc, kind, value })
+                    if kind == LabelKind::Global && value == arg_value =>
+                {
+                    toks.push(MacroToken::Argument { loc, index: 0 });
                 }
 
                 Some(tok) => {
@@ -1242,7 +1242,7 @@ where
             name,
             Macro {
                 loc,
-                args: 1, // the current token
+                args: vec![arg_value], // the current token
                 tokens: toks,
             },
         );
@@ -2501,7 +2501,7 @@ where
 
                             self.expect_symbol(SymbolName::Comma)?;
 
-                            let args = match self.next()? {
+                            let args_count = match self.next()? {
                                 None => return self.end_of_input_err(),
                                 Some(Token::Number { value, .. }) => value as usize,
                                 Some(tok) => {
@@ -2513,60 +2513,77 @@ where
                                 }
                             };
 
+                            let mut args = Vec::new();
+                            for _ in 0..args_count {
+                                self.expect_symbol(SymbolName::Comma)?;
+
+                                match self.next()? {
+                                    None => return self.end_of_input_err(),
+
+                                    Some(Token::Label { loc, kind, value }) => {
+                                        let interner = self.str_interner.as_ref().borrow();
+                                        let str_value = interner.get(value).unwrap();
+                                        if kind != LabelKind::Global {
+                                            return asm_err!(
+                                                loc,
+                                                "\"@macro\" argument name \"{str_value}\" must be a global label"
+                                            );
+                                        }
+                                        args.push(value);
+                                    }
+
+                                    Some(tok) => {
+                                        return asm_err!(
+                                            tok.loc(),
+                                            "Unexpected {}, expected a macro argument name",
+                                            tok.as_display(&self.str_interner)
+                                        );
+                                    }
+                                };
+                            }
+
                             self.active_macro = Some(value);
                             let mut toks = Vec::new();
+                            let mut macro_depth = 0;
                             loop {
                                 match self.next()? {
                                     None => return self.end_of_input_err(),
                                     Some(Token::Comment { .. } | Token::NewLine { .. }) => {}
 
-                                    Some(Token::Directive {
-                                        name: DirectiveName::EndMacro,
-                                        ..
-                                    }) => {
-                                        self.active_macro = None;
-                                        break;
+                                    Some(
+                                        tok @ Token::Directive {
+                                            name: DirectiveName::Macro,
+                                            ..
+                                        },
+                                    ) => {
+                                        macro_depth += 1;
+                                        toks.push(MacroToken::Token(tok));
                                     }
 
-                                    Some(Token::NestedDirective { loc, level, name }) => {
-                                        if level <= 2 {
-                                            toks.push(MacroToken::Token(Token::Directive {
-                                                loc,
-                                                name,
-                                            }));
-                                        } else {
-                                            toks.push(MacroToken::Token(Token::NestedDirective {
-                                                loc,
-                                                level: level - 1,
-                                                name,
-                                            }));
+                                    Some(
+                                        tok @ Token::Directive {
+                                            name: DirectiveName::EndMacro,
+                                            ..
+                                        },
+                                    ) => {
+                                        if macro_depth == 0 {
+                                            self.active_macro = None;
+                                            break;
                                         }
+                                        macro_depth -= 1;
+                                        toks.push(MacroToken::Token(tok));
                                     }
 
-                                    Some(Token::MacroArg { loc, value }) => {
-                                        if value == 0 {
-                                            todo!("need error message");
-                                        } else {
-                                            toks.push(MacroToken::Argument {
-                                                loc,
-                                                index: value as usize - 1,
-                                            });
-                                        }
-                                    }
-
-                                    Some(Token::NestedMacroArg { loc, level, value }) => {
-                                        if level <= 2 {
-                                            toks.push(MacroToken::Token(Token::MacroArg {
-                                                loc,
-                                                value,
-                                            }));
-                                        } else {
-                                            toks.push(MacroToken::Token(Token::NestedMacroArg {
-                                                loc,
-                                                level: level - 1,
-                                                value,
-                                            }));
-                                        }
+                                    Some(Token::Label { loc, kind, value })
+                                        if kind == LabelKind::Global && args.contains(&value) =>
+                                    {
+                                        toks.push(MacroToken::Argument {
+                                            loc,
+                                            index: args
+                                                .iter()
+                                                .position(|arg| arg == &value)
+                                                .unwrap(),
+                                        })
                                     }
 
                                     Some(tok) => {

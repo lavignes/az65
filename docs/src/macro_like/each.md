@@ -7,8 +7,8 @@ for each input token.
 
 ```
 ; Will print the numbers on separate lines
-@each { 1 2 3 4 }
-    @echo @1
+@each Token, { 1 2 3 4 }
+    @echo Token
 @endeach
 ```
 
@@ -16,10 +16,10 @@ Each can be combined with [`@count`](./count.md) to create
 a `REPEAT` macro:
 
 ```
-@macro REPEAT, 2
-    @@each { @@count @1 }
-        @2
-    @@endeach
+@macro REPEAT, 2, N, Body
+    @each Unused { @count N }
+        Body
+    @endeach
 @endmacro
 
 ; Prints "Hello" 3 times
@@ -32,10 +32,10 @@ You can also think of a `REPEAT` with a conditional
 expression as an `IF` block for conditional compilation:
 
 ```
-@macro IF, 2
-    @@each { @@count (@1) == 1 }
-        @2
-    @@endeach
+@macro IF, 2, Condition, Body
+    @each { @count (Condition) == 1 }
+        Body
+    @endeach
 @endmacro
 
 ; Block of code will not be parsed

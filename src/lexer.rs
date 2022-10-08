@@ -50,9 +50,6 @@ pub enum LexerError {
     #[error("unknown directive: `{msg}`")]
     UnknownDirective { loc: SourceLoc, msg: String },
 
-    #[error("malformed macro argument: `{msg}`")]
-    MalformedMacroArgument { loc: SourceLoc, msg: String },
-
     #[error("malformed label: `{msg}`")]
     MalformedLabel { loc: SourceLoc, msg: String },
 }
@@ -70,7 +67,6 @@ impl LexerError {
             Self::MalformedHexidecimalNumber { loc, .. } => *loc,
             Self::UnrecognizedInput { loc, .. } => *loc,
             Self::UnknownDirective { loc, .. } => *loc,
-            Self::MalformedMacroArgument { loc, .. } => *loc,
             Self::MalformedLabel { loc, .. } => *loc,
         }
     }
@@ -358,7 +354,7 @@ enum State {
     InDirective,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum LabelKind {
     Global,
     Local,
@@ -389,20 +385,6 @@ pub enum Token<A: ArchTokens> {
         loc: SourceLoc,
         name: DirectiveName,
     },
-    NestedDirective {
-        loc: SourceLoc,
-        level: usize,
-        name: DirectiveName,
-    },
-    MacroArg {
-        loc: SourceLoc,
-        value: u32,
-    },
-    NestedMacroArg {
-        loc: SourceLoc,
-        level: usize,
-        value: u32,
-    },
     Register {
         loc: SourceLoc,
         name: A::RegisterName,
@@ -432,9 +414,6 @@ impl<A: ArchTokens> Token<A> {
             Self::Number { loc, .. } => *loc,
             Self::Operation { loc, .. } => *loc,
             Self::Directive { loc, .. } => *loc,
-            Self::NestedDirective { loc, .. } => *loc,
-            Self::MacroArg { loc, .. } => *loc,
-            Self::NestedMacroArg { loc, .. } => *loc,
             Self::Register { loc, .. } => *loc,
             Self::Flag { loc, .. } => *loc,
             Self::Symbol { loc, .. } => *loc,
@@ -476,23 +455,8 @@ impl<'a, A: ArchTokens> Display for DisplayToken<'a, A> {
             Token::Number { value, .. } => write!(f, "number: {value}"),
             Token::Operation { name, .. } => write!(f, "operation: \"{name}\""),
             Token::Directive { name, .. } => write!(f, "directive: \"{name}\""),
-            Token::NestedDirective { level, name, .. } => {
-                write!(f, "nested directive: \"")?;
-                for _ in 0..level - 1 {
-                    write!(f, "@")?;
-                }
-                write!(f, "{name}\"")
-            }
             Token::Register { name, .. } => write!(f, "register: \"{name}\""),
             Token::Flag { name, .. } => write!(f, "flag: \"{name}\""),
-            Token::MacroArg { value, .. } => write!(f, "macro argument: \"@{value}\""),
-            Token::NestedMacroArg { level, value, .. } => {
-                write!(f, "nested macro argument: \"")?;
-                for _ in 0..level - 1 {
-                    write!(f, "@")?;
-                }
-                write!(f, "{value}\"")
-            }
             Token::Symbol { name, .. } => write!(f, "symbol: \"{name}\""),
             Token::Label { value, .. } => {
                 let str_interner = str_interner.as_ref().borrow();
@@ -1130,7 +1094,7 @@ impl<R: Read, A: ArchTokens> Iterator for Lexer<R, A> {
                 }
 
                 State::InDirective => match c {
-                    _ if c.is_alphanumeric() || c == '_' || c == '@' => {
+                    _ if c.is_alphanumeric() || c == '_' => {
                         self.buffer.push(c);
                     }
 
@@ -1138,43 +1102,11 @@ impl<R: Read, A: ArchTokens> Iterator for Lexer<R, A> {
                         self.state = State::Initial;
                         self.stash = Some(c);
 
-                        let mut level = 0;
-                        for c in self.buffer.chars() {
-                            if c == '@' {
-                                level += 1;
-                            } else {
-                                break;
-                            }
-                        }
-
-                        if let Ok(value) = u32::from_str_radix(&self.buffer.as_str()[level..], 10) {
-                            return if level > 1 {
-                                Some(Ok(Token::NestedMacroArg {
-                                    loc: self.tok_loc,
-                                    level,
-                                    value,
-                                }))
-                            } else {
-                                Some(Ok(Token::MacroArg {
-                                    loc: self.tok_loc,
-                                    value,
-                                }))
-                            };
-                        }
-
-                        if let Some(name) = DirectiveName::parse(&self.buffer[level - 1..]) {
-                            return if level > 1 {
-                                Some(Ok(Token::NestedDirective {
-                                    loc: self.tok_loc,
-                                    level,
-                                    name,
-                                }))
-                            } else {
-                                Some(Ok(Token::Directive {
-                                    loc: self.tok_loc,
-                                    name,
-                                }))
-                            };
+                        if let Some(name) = DirectiveName::parse(&self.buffer) {
+                            return Some(Ok(Token::Directive {
+                                loc: self.tok_loc,
+                                name,
+                            }));
                         }
 
                         return Some(Err(LexerError::UnknownDirective {
@@ -1739,29 +1671,5 @@ mod tests {
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
         assert!(matches!(lexer.next(), None));
-    }
-
-    #[test]
-    fn sanity_test() {
-        let text = r#"
-            @org $0000
-
-            @macro foo 2
-                @macro foo2 2
-                    add @@1, @@2
-                @endmacro
-                foo2 @1, @2
-            @endmacro
-            
-            @echo "hello"
-            @die
-            
-            ; comment
-            foo a, b
-        "#;
-        let mut lexer = lexer(text);
-        while let Some(result) = lexer.next() {
-            assert!(result.is_ok());
-        }
     }
 }
