@@ -376,8 +376,6 @@ fn structs1() {
 
 #[test]
 fn structs2() {
-    // TODO: This sucks. lexers always emit a new line as a hack
-    //   which terminates the assert expression early..
     let assembler = assembler(&[(
         "/test.asm",
         r#"
@@ -398,11 +396,10 @@ fn structs2() {
             @endstruct
 
             @macro SIZEOF, 1, Label
-                @parse @getmeta Label, "@SIZEOF"
+                @parse @string { @getmeta Label, "@SIZEOF" "\\" }
             @endmacro
 
-            ; order matters here (see TODO above)
-            @assert 2 == SIZEOF MyStruct.field1
+            @assert SIZEOF MyStruct.field1 == 2
         "#,
     )]);
 
@@ -603,7 +600,7 @@ fn getmeta() {
                nop
 
            @macro BANK_OF, 1, Label
-               @parse @string { "$" @getmeta Label, "BANK" }
+               @parse @string { "$" @getmeta Label, "BANK" "\\" }
            @endmacro
 
            @db BANK_OF mylabel

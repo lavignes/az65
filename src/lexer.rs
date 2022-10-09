@@ -72,6 +72,7 @@ impl LexerError {
     }
 }
 
+/// Architecture-specific token types
 pub trait ArchTokens: Copy + Clone {
     type RegisterName: RegisterName;
     type FlagName: FlagName;
@@ -121,6 +122,7 @@ pub enum SymbolName {
     ShiftLeftLogical,
     ShiftRightLogical,
     Div,
+    BackSlash,
     Question,
 }
 
@@ -156,6 +158,7 @@ impl SymbolName {
             "<<<" => Some(Self::ShiftLeftLogical),
             ">>>" => Some(Self::ShiftRightLogical),
             "/" => Some(Self::Div),
+            "\\" => Some(Self::BackSlash),
             "?" => Some(Self::Question),
             _ => None,
         }
@@ -197,6 +200,7 @@ impl Display for SymbolName {
                 Self::ShiftLeftLogical => "<<<",
                 Self::ShiftRightLogical => ">>>",
                 Self::Div => "/",
+                Self::BackSlash => "\\",
                 Self::Question => "?",
             }
         )
@@ -578,6 +582,7 @@ impl<R: Read, A> Lexer<R, A> {
                 | '>'
                 | '?'
                 | '/'
+                | '\\'
         )
     }
 }
@@ -1418,7 +1423,7 @@ mod tests {
     #[test]
     fn symbols() {
         let text = r#"
-            ~ ! % ^ & && * # ( ) { } - == + | || : , < > <= >= << >> <<< >>> / ?
+            ~ ! % ^ & && * # ( ) { } - == + | || : , < > <= >= << >> <<< >>> / \ ?
         "#;
         let mut lexer = lexer(text);
         assert!(matches!(lexer.next(), Some(Ok(Token::NewLine { .. }))));
@@ -1615,6 +1620,13 @@ mod tests {
             lexer.next(),
             Some(Ok(Token::Symbol {
                 name: SymbolName::Div,
+                ..
+            }))
+        ));
+        assert!(matches!(
+            lexer.next(),
+            Some(Ok(Token::Symbol {
+                name: SymbolName::BackSlash,
                 ..
             }))
         ));
