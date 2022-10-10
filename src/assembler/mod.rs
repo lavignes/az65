@@ -1624,6 +1624,14 @@ where
                 }
                 Some(Token::Symbol {
                     loc,
+                    name: SymbolName::Plus,
+                }) => {
+                    self.next()?;
+                    self.expr_prec_11(nodes)?;
+                    return Ok(loc);
+                }
+                Some(Token::Symbol {
+                    loc,
                     name: SymbolName::Bang,
                 }) => {
                     self.next()?;
