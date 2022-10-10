@@ -374,13 +374,13 @@ fn ld_d() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
-            ld d, a  
-            ld d, b  
-            ld d, c  
-            ld d, d  
-            ld d, e  
-            ld d, h  
-            ld d, l  
+            ld d, a
+            ld d, b
+            ld d, c
+            ld d, d
+            ld d, e
+            ld d, h
+            ld d, l
             ld d, (hl)
             ld d, $42
             @dw @here
@@ -414,13 +414,13 @@ fn ld_e() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
-            ld e, a  
-            ld e, b  
-            ld e, c  
-            ld e, d  
-            ld e, e  
-            ld e, h  
-            ld e, l  
+            ld e, a
+            ld e, b
+            ld e, c
+            ld e, d
+            ld e, e
+            ld e, h
+            ld e, l
             ld e, (hl)
             ld e, $42
             @dw @here
@@ -454,13 +454,13 @@ fn ld_h() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
-            ld h, a  
-            ld h, b  
-            ld h, c  
-            ld h, d  
-            ld h, e  
-            ld h, h  
-            ld h, l  
+            ld h, a
+            ld h, b
+            ld h, c
+            ld h, d
+            ld h, e
+            ld h, h
+            ld h, l
             ld h, (hl)
             ld h, $42
             @dw @here
@@ -494,13 +494,13 @@ fn ld_l() {
     let assembler = assembler(&[(
         "/test.asm",
         r#"
-            ld l, a  
-            ld l, b  
-            ld l, c  
-            ld l, d  
-            ld l, e  
-            ld l, h  
-            ld l, l  
+            ld l, a
+            ld l, b
+            ld l, c
+            ld l, d
+            ld l, e
+            ld l, h
+            ld l, l
             ld l, (hl)
             ld l, $42
             @dw @here
@@ -769,6 +769,7 @@ fn add() {
             add a, l
             add a, (hl)
             add a, $42
+            add a, ($42)
             @dw @here
         "#,
     )]);
@@ -796,7 +797,8 @@ fn add() {
         0x85,
         0x86,
         0xC6, 0x42,
-        16, 0x00
+        0xC6, 0x42,
+        18, 0x00
     ], data);
 }
 
@@ -814,6 +816,7 @@ fn adc() {
             adc a, l
             adc a, (hl)
             adc a, $42
+            adc a, ($42)
             @dw @here
         "#,
     )]);
@@ -836,7 +839,8 @@ fn adc() {
         0x8D,
         0x8E,
         0xCE, 0x42,
-        10, 0x00
+        0xCE, 0x42,
+        12, 0x00
     ], data);
 }
 
@@ -854,6 +858,7 @@ fn sub() {
             sub l
             sub (hl)
             sub $42
+            sub ($42)
             @dw @here
         "#,
     )]);
@@ -876,7 +881,8 @@ fn sub() {
         0x95,
         0x96,
         0xD6, 0x42,
-        10, 0x00
+        0xD6, 0x42,
+        12, 0x00
     ], data);
 }
 
@@ -894,6 +900,7 @@ fn sbc() {
             sbc a, l
             sbc a, (hl)
             sbc a, $42
+            sbc a, ($42)
             @dw @here
         "#,
     )]);
@@ -916,7 +923,8 @@ fn sbc() {
         0x9D,
         0x9E,
         0xDE, 0x42,
-        10, 0x00
+        0xDE, 0x42,
+        12, 0x00
     ], data);
 }
 
@@ -934,6 +942,7 @@ fn and() {
             and l
             and (hl)
             and $42
+            and ($42)
             @dw @here
         "#,
     )]);
@@ -956,7 +965,8 @@ fn and() {
         0xA5,
         0xA6,
         0xE6, 0x42,
-        10, 0x00
+        0xE6, 0x42,
+        12, 0x00
     ], data);
 }
 
@@ -974,6 +984,7 @@ fn xor() {
             xor l
             xor (hl)
             xor $42
+            xor ($42)
             @dw @here
         "#,
     )]);
@@ -996,7 +1007,8 @@ fn xor() {
         0xAD,
         0xAE,
         0xEE, 0x42,
-        10, 0x00
+        0xEE, 0x42,
+        12, 0x00
     ], data);
 }
 
@@ -1014,6 +1026,7 @@ fn or() {
             or l
             or (hl)
             or $42
+            or ($42)
             @dw @here
         "#,
     )]);
@@ -1036,7 +1049,8 @@ fn or() {
         0xB5,
         0xB6,
         0xF6, 0x42,
-        10, 0x00
+        0xF6, 0x42,
+        12, 0x00
     ], data);
 }
 
@@ -1054,6 +1068,7 @@ fn cp() {
             cp l
             cp (hl)
             cp $42
+            cp ($42)
             @dw @here
         "#,
     )]);
@@ -1076,7 +1091,8 @@ fn cp() {
         0xCD,
         0xCE,
         0xFE, 0x42,
-        10, 0x00
+        0xFE, 0x42,
+        12, 0x00
     ], data);
 }
 
@@ -1396,14 +1412,14 @@ fn rr() {
 
     #[rustfmt::skip]
     assert_eq!(vec![
-        0xCB, 0x1F, 
-        0xCB, 0x18, 
-        0xCB, 0x19, 
-        0xCB, 0x1A, 
-        0xCB, 0x1B, 
-        0xCB, 0x1C, 
-        0xCB, 0x1D, 
-        0xCB, 0x1E, 
+        0xCB, 0x1F,
+        0xCB, 0x18,
+        0xCB, 0x19,
+        0xCB, 0x1A,
+        0xCB, 0x1B,
+        0xCB, 0x1C,
+        0xCB, 0x1D,
+        0xCB, 0x1E,
         16, 0x00
     ], data);
 }
@@ -1442,7 +1458,7 @@ fn sla() {
         0xCB, 0x24,
         0xCB, 0x25,
         0xCB, 0x26,
-        16, 0x00  
+        16, 0x00
     ], data);
 }
 
@@ -1450,14 +1466,14 @@ fn sla() {
 fn sra() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#"       
-            sra a  
-            sra b  
-            sra c  
-            sra d  
-            sra e  
-            sra h  
-            sra l  
+        r#"
+            sra a
+            sra b
+            sra c
+            sra d
+            sra e
+            sra h
+            sra l
             sra (hl)
             @dw @here
         "#,
@@ -1480,7 +1496,7 @@ fn sra() {
         0xCB, 0x2C,
         0xCB, 0x2D,
         0xCB, 0x2E,
-        16, 0x00  
+        16, 0x00
     ], data);
 }
 
@@ -1518,7 +1534,7 @@ fn swap() {
         0xCB, 0x34,
         0xCB, 0x35,
         0xCB, 0x36,
-        16, 0x00   
+        16, 0x00
     ], data);
 }
 
@@ -1526,7 +1542,7 @@ fn swap() {
 fn srl() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#"        
+        r#"
             srl a
             srl b
             srl c
@@ -1556,7 +1572,7 @@ fn srl() {
         0xCB, 0x3C,
         0xCB, 0x3D,
         0xCB, 0x3E,
-        16, 0x00  
+        16, 0x00
     ], data);
 }
 
@@ -1602,7 +1618,7 @@ fn bit() {
 fn res() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             res 0, a
             res 1, b
             res 2, c
@@ -1640,7 +1656,7 @@ fn res() {
 fn set() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             set 0, a
             set 1, b
             set 2, c

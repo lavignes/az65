@@ -1489,7 +1489,7 @@ fn ld() {
 fn ldd() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             ldd
             @dw @here
         "#,
@@ -1513,7 +1513,7 @@ fn ldd() {
 fn lddr() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             lddr
             @dw @here
         "#,
@@ -1537,7 +1537,7 @@ fn lddr() {
 fn ldi() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             ldi
             @dw @here
         "#,
@@ -1561,7 +1561,7 @@ fn ldi() {
 fn ldir() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             ldir
             @dw @here
         "#,
@@ -1585,7 +1585,7 @@ fn ldir() {
 fn neg() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             neg
             @dw @here
         "#,
@@ -1609,7 +1609,7 @@ fn neg() {
 fn nop() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             nop
             @dw @here
         "#,
@@ -1888,7 +1888,7 @@ fn push() {
 fn res() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             res 0, a
             res 1, b
             res 2, c
@@ -1930,7 +1930,7 @@ fn res() {
 fn ret() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             ret nz
             ret z
             ret nc
@@ -2018,7 +2018,7 @@ fn retn() {
 fn rl() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             rl a
             rl b
             rl c
@@ -2084,7 +2084,7 @@ fn rla() {
 fn rlc() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             rlc a
             rlc b
             rlc c
@@ -2174,7 +2174,7 @@ fn rld() {
 fn rr() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             rr a
             rr b
             rr c
@@ -2216,7 +2216,7 @@ fn rr() {
 fn rra() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             rra
             @dw @here
         "#,
@@ -2240,7 +2240,7 @@ fn rra() {
 fn rrc() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             rrc a
             rrc b
             rrc c
@@ -2282,7 +2282,7 @@ fn rrc() {
 fn rrca() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             rrca
             @dw @here
         "#,
@@ -2306,7 +2306,7 @@ fn rrca() {
 fn rrd() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             rrd
             @dw @here
         "#,
@@ -2330,7 +2330,7 @@ fn rrd() {
 fn rst() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             rst $00
             rst $08
             rst $10
@@ -2428,7 +2428,7 @@ fn sbc() {
 fn scf() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             scf
             @dw @here
         "#,
@@ -2452,7 +2452,7 @@ fn scf() {
 fn set() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             set 0, a
             set 1, b
             set 2, c
@@ -2494,7 +2494,7 @@ fn set() {
 fn sll() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             sll a
             sll b
             sll c
@@ -2536,7 +2536,7 @@ fn sll() {
 fn sla() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             sla a
             sla b
             sla c
@@ -2578,7 +2578,7 @@ fn sla() {
 fn sra() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             sra a
             sra b
             sra c
@@ -2620,7 +2620,7 @@ fn sra() {
 fn srl() {
     let assembler = assembler(&[(
         "/test.asm",
-        r#" 
+        r#"
             srl a
             srl b
             srl c
