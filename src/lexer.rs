@@ -245,6 +245,7 @@ pub enum DirectiveName {
     Segment,
     If,
     EndIf,
+    Entropy,
 }
 
 impl DirectiveName {
@@ -286,6 +287,7 @@ impl DirectiveName {
             "@segment" | "@SEGMENT" => Some(Self::Segment),
             "@if" | "@IF" => Some(Self::If),
             "@endif" | "@ENDIF" => Some(Self::EndIf),
+            "@entropy" | "@ENTROPY" => Some(Self::Entropy),
             _ => None,
         }
     }
@@ -333,6 +335,7 @@ impl Display for DirectiveName {
                 Self::Segment => "@segment",
                 Self::If => "@if",
                 Self::EndIf => "@endif",
+                Self::Entropy => "@entropy",
             }
         )
     }

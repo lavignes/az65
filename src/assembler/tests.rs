@@ -351,6 +351,28 @@ fn macros7() {
 }
 
 #[test]
+fn macros8() {
+    let assembler = assembler(&[(
+        "/test.asm",
+        r#"
+            @macro FOO, 0
+                @echo @entropy
+                @label { @entropy ".test" }
+            @endmacro
+
+            FOO
+        "#,
+    )]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+}
+
+#[test]
 fn structs1() {
     let assembler = assembler(&[(
         "/test.asm",

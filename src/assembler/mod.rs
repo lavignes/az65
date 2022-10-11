@@ -100,6 +100,15 @@ impl<R: Read, A: ArchTokens> TokenSource<R, A> {
                             state.macro_arg_offset = 0;
                             continue;
                         }
+
+                        MacroToken::Entropy { loc } => {
+                            state.macro_offset += 1;
+                            state.loc = loc;
+                            return Some(Ok(Token::String {
+                                loc,
+                                value: state.entropy,
+                            }));
+                        }
                     }
                 }
             }
@@ -111,6 +120,7 @@ impl<R: Read, A: ArchTokens> TokenSource<R, A> {
 enum MacroToken<A: ArchTokens> {
     Token(Token<A>),
     Argument { index: usize },
+    Entropy { loc: SourceLoc },
 }
 
 struct Macro<A: ArchTokens> {
@@ -136,6 +146,7 @@ struct MacroState<A: ArchTokens> {
     macro_arg_offset: usize,
     loc: SourceLoc,
     included_from: Option<SourceLoc>,
+    entropy: StrRef,
 }
 
 enum SegmentMode {
@@ -442,10 +453,14 @@ where
                                         toks.push(MacroToken::Token(Token::String { loc, value }));
                                     }
 
-                                    let name = self
-                                        .str_interner
-                                        .borrow_mut()
-                                        .intern(format!("@metaget Invocation{}", self.entropy));
+                                    let (name, entropy) = {
+                                        let mut interner = self.str_interner.borrow_mut();
+                                        let name = interner
+                                            .intern(format!("@metaget Invocation{}", self.entropy));
+                                        let entropy =
+                                            interner.intern(format!("__{}", self.entropy));
+                                        (name, entropy)
+                                    };
                                     self.entropy += 1;
                                     self.macros.insert(
                                         name,
@@ -466,6 +481,7 @@ where
                                         macro_arg_offset: 0,
                                         loc,
                                         included_from: Some(loc),
+                                        entropy,
                                     }));
                                     self.cwds.push(self.cwd.take().unwrap());
                                     continue;
@@ -841,6 +857,11 @@ where
             }
         }
 
+        let entropy = self
+            .str_interner
+            .borrow_mut()
+            .intern(format!("__{}", self.entropy));
+        self.entropy += 1;
         Ok(MacroState {
             name,
             args,
@@ -849,6 +870,7 @@ where
             macro_arg_offset: 0,
             loc,
             included_from: Some(loc),
+            entropy,
         })
     }
 
@@ -949,6 +971,7 @@ where
 
         let mut interner = self.str_interner.borrow_mut();
         let name = interner.intern(format!("{directive_name} Invocation{}", self.entropy));
+        let entropy = interner.intern(format!("__{}", self.entropy));
         self.entropy += 1;
         let value = match base {
             2 => interner.intern(format!("{value:b}")),
@@ -983,6 +1006,7 @@ where
             macro_arg_offset: 0,
             loc,
             included_from: Some(loc),
+            entropy,
         })
     }
 
@@ -1008,10 +1032,12 @@ where
             }
         };
 
-        let name = self
-            .str_interner
-            .borrow_mut()
-            .intern(format!("@count Invocation{}", self.entropy));
+        let (name, entropy) = {
+            let mut interner = self.str_interner.borrow_mut();
+            let name = interner.intern(format!("@count Invocation{}", self.entropy));
+            let entropy = interner.intern(format!("__{}", self.entropy));
+            (name, entropy)
+        };
         self.entropy += 1;
         let mut toks = Vec::new();
         for i in 0..count {
@@ -1046,6 +1072,7 @@ where
             macro_arg_offset: 0,
             loc,
             included_from: Some(loc),
+            entropy,
         })
     }
 
@@ -1223,10 +1250,12 @@ where
             }
         }
 
-        let name = self
-            .str_interner
-            .borrow_mut()
-            .intern(format!("@each Invocation{}", self.entropy));
+        let (name, entropy) = {
+            let mut interner = self.str_interner.borrow_mut();
+            let name = interner.intern(format!("@each Invocation{}", self.entropy));
+            let entropy = interner.intern(format!("__{}", self.entropy));
+            (name, entropy)
+        };
         self.entropy += 1;
         let mut toks = Vec::new();
         loop {
@@ -1238,6 +1267,13 @@ where
                     ..
                 }) => {
                     break;
+                }
+
+                Some(Token::Directive {
+                    loc,
+                    name: DirectiveName::Entropy,
+                }) => {
+                    toks.push(MacroToken::Entropy { loc });
                 }
 
                 Some(Token::Label { kind, value, .. })
@@ -1270,6 +1306,7 @@ where
                 macro_arg_offset: 0,
                 loc,
                 included_from: Some(loc),
+                entropy,
             });
         }
         Ok(states)
@@ -2591,6 +2628,13 @@ where
                                         }
                                         macro_depth -= 1;
                                         toks.push(MacroToken::Token(tok));
+                                    }
+
+                                    Some(Token::Directive {
+                                        loc,
+                                        name: DirectiveName::Entropy,
+                                    }) => {
+                                        toks.push(MacroToken::Entropy { loc });
                                     }
 
                                     Some(Token::Label { kind, value, .. })

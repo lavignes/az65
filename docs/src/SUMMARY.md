@@ -47,6 +47,7 @@
   - [`@hex`](./macro_like/hex.md)
   - [`@bin`](./macro_like/bin.md)
   - [`@parse`](./macro_like/parse.md)
+  - [`@entropy`](./macro_like/entropy.md)
 
 - [Advanced Macros](./advanced_macros.md)
 
