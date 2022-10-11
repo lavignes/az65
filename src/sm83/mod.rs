@@ -1620,6 +1620,7 @@ where
             OperationName::Halt => {
                 asm.next()?;
                 asm.data.push(0x76);
+                asm.data.push(0x00);
             }
 
             OperationName::Add => {
