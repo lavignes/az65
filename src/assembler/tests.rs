@@ -409,12 +409,12 @@ fn structs2() {
             @assert @sizeof MyStruct.field4 == 1
 
             @struct MyStruct
-                field1 2
-                field2 1
+                field1 @dw
+                field2: @db
                 @align 8
                 field3 1
                 @align 8
-                field4 1
+                field4: 1
             @endstruct
 
             @macro SIZEOF, 1, Label

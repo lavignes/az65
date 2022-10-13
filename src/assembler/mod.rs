@@ -2754,8 +2754,48 @@ where
                                                 "The field \"{direct_label}\" was already defined",
                                             );
                                         }
+
+                                        // optional colon
+                                        if let Some(Token::Symbol {
+                                            name: SymbolName::Colon,
+                                            ..
+                                        }) = self.peek()?
+                                        {
+                                            self.next()?;
+                                        }
+
                                         match self.peek()? {
                                             None => return self.end_of_input_err(),
+                                            Some(Token::Directive {
+                                                name: DirectiveName::Db,
+                                                ..
+                                            }) => {
+                                                self.next()?;
+                                                let mut interner = self.str_interner.borrow_mut();
+                                                let key = interner.intern("@SIZEOF");
+                                                let value = interner.intern(format!("1"));
+                                                self.symtab.insert_with_meta(
+                                                    direct,
+                                                    Symbol::Value(struct_size),
+                                                    &[[key, value]],
+                                                );
+                                                struct_size = struct_size.wrapping_add(1);
+                                            }
+                                            Some(Token::Directive {
+                                                name: DirectiveName::Dw,
+                                                ..
+                                            }) => {
+                                                self.next()?;
+                                                let mut interner = self.str_interner.borrow_mut();
+                                                let key = interner.intern("@SIZEOF");
+                                                let value = interner.intern(format!("2"));
+                                                self.symtab.insert_with_meta(
+                                                    direct,
+                                                    Symbol::Value(struct_size),
+                                                    &[[key, value]],
+                                                );
+                                                struct_size = struct_size.wrapping_add(2);
+                                            }
                                             Some(_) => match self.const_expr()? {
                                                 (loc, None) => {
                                                     return asm_err!(
@@ -2783,7 +2823,7 @@ where
                                     Some(tok) => {
                                         return asm_err!(
                                             tok.loc(),
-                                            "Unexpected {}, expected field name or \"@ends\"",
+                                            "Unexpected {}, expected field name or \"@endstruct\"",
                                             tok.as_display(&self.str_interner)
                                         );
                                     }
