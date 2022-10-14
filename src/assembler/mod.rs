@@ -2207,6 +2207,12 @@ where
 
                             match self.seg_mode {
                                 SegmentMode::Addr => {
+                                    if (self.here as usize) + 1 > (u16::MAX as usize) {
+                                        return asm_err!(
+                                            loc,
+                                            "\"@db\" bytes extend past address $ffff"
+                                        );
+                                    }
                                     self.here += 1;
                                 }
 
@@ -2271,6 +2277,12 @@ where
 
                             match self.seg_mode {
                                 SegmentMode::Addr => {
+                                    if (self.here as usize) + 2 > (u16::MAX as usize) {
+                                        return asm_err!(
+                                            loc,
+                                            "\"@dw\" bytes extend past address $ffff"
+                                        );
+                                    }
                                     self.here += 2;
                                 }
 
@@ -2282,11 +2294,11 @@ where
                                     {
                                         if (value as u32) > (u16::MAX as u32) {
                                             return asm_err!(
-                                            loc,
-                                            "\"@dw\" expression result ({value}) will not fit in a word"
-                                        );
+                                                loc,
+                                                "\"@dw\" expression result ({value}) will not fit in a word"
+                                            );
                                         }
-                                        if (self.here as usize) + 1 > (u16::MAX as usize) {
+                                        if (self.here as usize) + 2 > (u16::MAX as usize) {
                                             return asm_err!(
                                                 loc,
                                                 "\"@dw\" bytes extend past address $ffff"
@@ -2316,9 +2328,9 @@ where
                             let size = match self.const_expr()? {
                                 (loc, None) => {
                                     return asm_err!(
-                                    loc,
-                                    "The size of a \"@ds\" directive must be immediately solvable"
-                                );
+                                        loc,
+                                        "The size of a \"@ds\" directive must be immediately solvable"
+                                    );
                                 }
                                 (loc, Some(size)) => {
                                     if (size as u32) > (u16::MAX as u32) {
