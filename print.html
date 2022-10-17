@@ -1,0 +1,775 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>AZ65 Documentation</title>
+        <meta name="robots" content="noindex" />
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Usage</li><li class="chapter-item expanded "><a href="cli.html"><strong aria-hidden="true">1.</strong> Command Line Interface</a></li><li class="chapter-item expanded affix "><li class="part-title">Language Guide</li><li class="chapter-item expanded "><a href="expressions.html"><strong aria-hidden="true">2.</strong> Expressions</a></li><li class="chapter-item expanded "><a href="strings.html"><strong aria-hidden="true">3.</strong> Strings</a></li><li class="chapter-item expanded "><a href="labels.html"><strong aria-hidden="true">4.</strong> Labels</a></li><li class="chapter-item expanded "><a href="simple_directives.html"><strong aria-hidden="true">5.</strong> Simple Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="simple/echo.html"><strong aria-hidden="true">5.1.</strong> @echo</a></li><li class="chapter-item expanded "><a href="simple/here.html"><strong aria-hidden="true">5.2.</strong> @here</a></li><li class="chapter-item expanded "><a href="simple/org.html"><strong aria-hidden="true">5.3.</strong> @org</a></li><li class="chapter-item expanded "><a href="simple/defn.html"><strong aria-hidden="true">5.4.</strong> @defn</a></li><li class="chapter-item expanded "><a href="simple/defl.html"><strong aria-hidden="true">5.5.</strong> @defl</a></li><li class="chapter-item expanded "><a href="simple/redefn.html"><strong aria-hidden="true">5.6.</strong> @redefn</a></li><li class="chapter-item expanded "><a href="simple/redefl.html"><strong aria-hidden="true">5.7.</strong> @redefl</a></li><li class="chapter-item expanded "><a href="simple/undef.html"><strong aria-hidden="true">5.8.</strong> @undef</a></li><li class="chapter-item expanded "><a href="simple/assert.html"><strong aria-hidden="true">5.9.</strong> @assert</a></li><li class="chapter-item expanded "><a href="simple/die.html"><strong aria-hidden="true">5.10.</strong> @die</a></li><li class="chapter-item expanded "><a href="simple/db.html"><strong aria-hidden="true">5.11.</strong> @db</a></li><li class="chapter-item expanded "><a href="simple/dw.html"><strong aria-hidden="true">5.12.</strong> @dw</a></li><li class="chapter-item expanded "><a href="simple/ds.html"><strong aria-hidden="true">5.13.</strong> @ds</a></li><li class="chapter-item expanded "><a href="simple/segment.html"><strong aria-hidden="true">5.14.</strong> @segment</a></li><li class="chapter-item expanded "><a href="simple/if.html"><strong aria-hidden="true">5.15.</strong> @if</a></li><li class="chapter-item expanded "><a href="simple/struct.html"><strong aria-hidden="true">5.16.</strong> @struct</a></li><li class="chapter-item expanded "><a href="simple/sizeof.html"><strong aria-hidden="true">5.17.</strong> @sizeof</a></li><li class="chapter-item expanded "><a href="simple/incbin.html"><strong aria-hidden="true">5.18.</strong> @incbin</a></li><li class="chapter-item expanded "><a href="simple/align.html"><strong aria-hidden="true">5.19.</strong> @align</a></li><li class="chapter-item expanded "><a href="simple/meta.html"><strong aria-hidden="true">5.20.</strong> @meta</a></li></ol></li><li class="chapter-item expanded "><a href="macros.html"><strong aria-hidden="true">6.</strong> Macros</a></li><li class="chapter-item expanded "><a href="macro_like_directives.html"><strong aria-hidden="true">7.</strong> Macro-Like Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="macro_like/getmeta.html"><strong aria-hidden="true">7.1.</strong> @getmeta</a></li><li class="chapter-item expanded "><a href="macro_like/include.html"><strong aria-hidden="true">7.2.</strong> @include</a></li><li class="chapter-item expanded "><a href="macro_like/isdef.html"><strong aria-hidden="true">7.3.</strong> @isdef</a></li><li class="chapter-item expanded "><a href="macro_like/string.html"><strong aria-hidden="true">7.4.</strong> @string</a></li><li class="chapter-item expanded "><a href="macro_like/label.html"><strong aria-hidden="true">7.5.</strong> @label</a></li><li class="chapter-item expanded "><a href="macro_like/count.html"><strong aria-hidden="true">7.6.</strong> @count</a></li><li class="chapter-item expanded "><a href="macro_like/each.html"><strong aria-hidden="true">7.7.</strong> @each</a></li><li class="chapter-item expanded "><a href="macro_like/hex.html"><strong aria-hidden="true">7.8.</strong> @hex</a></li><li class="chapter-item expanded "><a href="macro_like/bin.html"><strong aria-hidden="true">7.9.</strong> @bin</a></li><li class="chapter-item expanded "><a href="macro_like/parse.html"><strong aria-hidden="true">7.10.</strong> @parse</a></li><li class="chapter-item expanded "><a href="macro_like/entropy.html"><strong aria-hidden="true">7.11.</strong> @entropy</a></li></ol></li><li class="chapter-item expanded "><a href="advanced_macros.html"><strong aria-hidden="true">8.</strong> Advanced Macros</a></li><li class="chapter-item expanded affix "><li class="part-title">NES-Specific Tips</li><li class="chapter-item expanded "><a href="nes/banking_metadata.html"><strong aria-hidden="true">9.</strong> Bank Metadata</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="nes/bank_switching.html"><strong aria-hidden="true">9.1.</strong> Bank Switching</a></li><li class="chapter-item expanded "><a href="nes/debug_symbols.html"><strong aria-hidden="true">9.2.</strong> Debug Symbols</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">AZ65 Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>AZ65 is a powerful but simple assembler for the Zilog Z80, MOS 6502, and Sharp
+LR35902 (sm83 / gbz80) architectures. In this book you'll learn the ins-and-outs
+of the assembler and its advanced meta-programming capabilities.</p>
+<p>Note that this book only covers using AZ65 and does not cover assembly
+in general.</p>
+<p>For assembly language references see:</p>
+<ul>
+<li><a href="https://z80.info/">z80.info</a> for lots of z80 resources.</li>
+<li><a href="https://6502.org/tutorials">6502.org</a> for plenty of 6502 tutorials.</li>
+<li><a href="https://gbdev.io/resources.html#programming">gbdev.io</a> for resources on 
+sm83/gbz80 programming </li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="command-line-interface"><a class="header" href="#command-line-interface">Command Line Interface</a></h1>
+<p>All the functionality of AZ65 is in the <code>az65</code> binary.</p>
+<h2 id="assembling-files"><a class="header" href="#assembling-files">Assembling Files</a></h2>
+<p>Pass the target CPU architecture and the name of an assembly file to assemble
+it:</p>
+<pre><code class="language-sh">az65 6502 code.asm
+</code></pre>
+<h2 id="architectures"><a class="header" href="#architectures">Architectures</a></h2>
+<ul>
+<li><code>6502</code> for MOS 6502</li>
+<li><code>z80</code> for Zilog Z80</li>
+<li><code>sm83</code> for the Sharp LR35902 (a.k.a gbz80)</li>
+</ul>
+<p>By default, <code>az65</code> will write the assembled program to <code>stdout</code>. You can direct
+this to a file using the <code>&gt;</code> operator:</p>
+<pre><code class="language-sh">az65 6502 code.asm &gt; code.bin
+</code></pre>
+<p>You can alternatively use the <code>-o</code> option to pick an output file:</p>
+<pre><code class="language-sh">az65 z80 code.asm -o code.bin
+</code></pre>
+<h2 id="search-paths"><a class="header" href="#search-paths">Search Paths</a></h2>
+<p>AZ65 supports specifying search paths for locating files that are referenced
+in your code. Pass search paths by repeatedly using the <code>-I</code> option.</p>
+<pre><code class="language-sh">az65 sm83 code.asm -I macros -I data &gt; code.bin
+</code></pre>
+<p>When a file is referenced by name it will be searched for in the same directory
+as the currently assembled file and if not found each include path will be
+checked in the order given.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="expressions"><a class="header" href="#expressions">Expressions</a></h1>
+<h2 id="number-formats"><a class="header" href="#number-formats">Number Formats</a></h2>
+<h3 id="binary"><a class="header" href="#binary">Binary</a></h3>
+<p>Binary numbers in AZ65 use standard 6502 binary number syntax. They are prefixed
+with a modulus (<code>%</code>). For example:</p>
+<ul>
+<li><code>%00001111</code></li>
+<li><code>%1010</code></li>
+<li><code>%0</code></li>
+</ul>
+<h3 id="hexadecimal"><a class="header" href="#hexadecimal">Hexadecimal</a></h3>
+<p>Like binary numbers, standard syntax is used. They are prefixed with a
+dollar-sign (<code>$</code>) and are <strong>case-insensitive</strong>. For example:</p>
+<ul>
+<li><code>$1234</code></li>
+<li><code>$DADcafe</code></li>
+<li><code>$0</code></li>
+</ul>
+<h3 id="decimal"><a class="header" href="#decimal">Decimal</a></h3>
+<p>Numbers without a <code>%</code> or <code>$</code> prefix are assumed to be decimal (base 10) numbers.</p>
+<h2 id="operators"><a class="header" href="#operators">Operators</a></h2>
+<p>All expressions in AZ65 operate on 32-bit <strong>signed</strong> integers with wrapping
+over/underflow semantics. All operators and their precedence match that of the C
+language with a few notable modifications:</p>
+<ol>
+<li>There is no C binary comma (<code>,</code>) operator. It is mostly an anachronism that
+many C programmers aren't even aware exists.</li>
+<li>The unary <code>&lt;</code> and <code>&gt;</code> operators, common in 6502 assembly, are present. They
+are used to get the low and high byte of a 16-bit word. For example:
+<ul>
+<li><code>&lt; $1234</code> evaluates to <code>$34</code>.</li>
+<li><code>&gt; $1234</code> evaluates to <code>$12</code>.</li>
+</ul>
+</li>
+<li>There is a unary <code>+</code> operator. This is mainly used to disambiguate between
+expressions and memory locations in some assembly languages. For example,
+in z80 assembly the instruction <code>ld a, ($42)</code> is ambiguous. A programmer
+may intend for this to load the value <code>$42</code> into <code>a</code>, but AZ65 will interpret
+this is loading a byte at address <code>$0042</code> into <code>a</code>. To add clarity, you can
+use a unary <code>+</code> to indicate that you are passing a numeric expression rather
+than an address:
+<ul>
+<li><code>ld a, +($42)</code></li>
+</ul>
+</li>
+<li>Unsigned (logical) shift operators are provided. Use the <code>&lt;&lt;&lt;</code> and <code>&gt;&gt;&gt;</code>
+symbols to shift left and right respectively:
+<ul>
+<li><code>$ffffffff &gt;&gt;&gt; 1</code> evaluates to <code>$7fffffff</code></li>
+<li><code>$ffffffff &lt;&lt;&lt; 1</code> evaluates to <code>$fffffffe</code></li>
+</ul>
+</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="strings"><a class="header" href="#strings">Strings</a></h1>
+<p>All strings in AZ64 are UTF-8 encoded. They are written enclosed in double
+quotes (<code>&quot;</code>):</p>
+<ul>
+<li><code>&quot;Hello World&quot;</code></li>
+<li><code>&quot;not a number: 1234&quot;</code></li>
+<li><code>&quot;Howdy, cowboy 🤠&quot;</code></li>
+</ul>
+<p>Use C-style escape sequences to write special characters inside a string:</p>
+<ul>
+<li><code>&quot;line break: \n&quot;</code></li>
+<li><code>&quot;tab: \t&quot;</code></li>
+<li><code>&quot;double-quote: \&quot;&quot;</code></li>
+</ul>
+<p>Multi-line strings can be written by placing a backslash immediately before the
+line break:</p>
+<pre><code>&quot;multi\
+line\
+string&quot;
+</code></pre>
+<p>To encode a byte directly, place a backslash before a hexadecimal number:</p>
+<pre><code>&quot;capital Q: \$51&quot;
+</code></pre>
+<h2 id="multicharacter-literals"><a class="header" href="#multicharacter-literals">Multicharacter Literals</a></h2>
+<p>AZ65 also supports the multicharacter literal that is present in C.</p>
+<p>You can specify big-endian 32-bit values as a sequence of 1 to 4 ASCII
+characters enclosed in single quotes (<code>'</code>):</p>
+<pre><code>'a'
+'yo'
+'test'
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="labels"><a class="header" href="#labels">Labels</a></h1>
+<p>There are 2 types of labels in AZ65:</p>
+<h2 id="global-labels"><a class="header" href="#global-labels">Global Labels</a></h2>
+<p>Global labels are labels as you'd normally expect them in an
+assembler. They are alphanumeric tokens that are used to name
+addresses and constants.</p>
+<pre><code>GlobalLabel:
+    jr GlobalLabel
+</code></pre>
+<p><em>Note that the use of colons (<code>:</code>) is optional</em>.</p>
+<h2 id="local-labels"><a class="header" href="#local-labels">Local Labels</a></h2>
+<p>Local labels are labels defined within the &quot;scope&quot; of
+a global label-- that is labels that are defined after a
+global label in your code. They look like global labels
+but begin with a dot (<code>.</code>):</p>
+<pre><code>GlobalLabel:
+    nop
+.LocalLabel:
+    jr .LocalLabel
+</code></pre>
+<p>Local labels are really just syntactic sugar for writing
+longer <em>fully-qualified</em> labels. The example above is 
+equivalent to this:</p>
+<pre><code>GlobalLabel:
+    nop
+GlobalLabel.LocalLabel:
+    jp GlobalLabel.LocalLabel
+</code></pre>
+<p>This means that two global labels can have local labels
+with the same name and they will not conflict with each other.</p>
+<p>It also means you can always refer to a local label by its
+full name. When written this way, they are referred to as
+&quot;direct&quot; labels.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="simple-directives"><a class="header" href="#simple-directives">Simple Directives</a></h1>
+<p>In assembly languages, &quot;directives&quot; are special commands that are used to
+control the behavior of the assembler. AZ65 directives are special tokens that
+begin with an at-sign (<code>@</code>).</p>
+<p>There are two kinds of directives in AZ65: &quot;simple&quot; and &quot;macro-like&quot; directives.
+We'll cover the simple directives first since they are just like directives
+found in most other assemblers.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="echo"><a class="header" href="#echo"><code>@echo</code></a></h1>
+<p>We'll start with the <code>@echo</code> directive since it is very useful for debugging
+and demonstrating future directives.</p>
+<p>The <code>@echo</code> directive takes a single string or expression argument and prints it
+to <code>stderr</code>.</p>
+<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<pre><code>@echo &quot;Hello World&quot;
+</code></pre>
+<p>Note that expressions are always printed in base 10. </p>
+<pre><code>@echo $1234 + $5678 ; Prints &quot;26796&quot; 
+</code></pre>
+<p>Methods of constructing strings out of expressions and printing in other bases
+will be covered later.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="here"><a class="header" href="#here"><code>@here</code></a></h1>
+<p>As AZ65 assembles your code, a virtual program counter keeps track of the
+16-bit address of every instruction and label you write.</p>
+<p>You access the current address in expressions using the <code>@here</code> directive.</p>
+<h2 id="examples-1"><a class="header" href="#examples-1">Examples</a></h2>
+<pre><code>@echo @here ; Prints &quot;0&quot;
+</code></pre>
+<pre><code>nop
+nop
+@echo @here ; Prints &quot;2&quot;
+</code></pre>
+<pre><code>nop
+nop
+jmp @here - 2 ; Jumps 2 bytes back
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="org"><a class="header" href="#org"><code>@org</code></a></h1>
+<p><code>@org</code> is the compliment to <a href="simple/./here.html"><code>@here</code></a>. It sets the virtual program
+counter to a new 16-bit value.</p>
+<h2 id="examples-2"><a class="header" href="#examples-2">Examples</a></h2>
+<pre><code>@org $8000
+@echo @here ; Prints &quot;32768&quot;
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="defn"><a class="header" href="#defn"><code>@defn</code></a></h1>
+<p>Use <code>@defn</code> to define constants. This works similarly to <code>EQU</code> found in most
+other assemblers.</p>
+<p><code>@defn</code> takes two arguments: a label, followed by an expression.</p>
+<h2 id="examples-3"><a class="header" href="#examples-3">Examples</a></h2>
+<pre><code>@defn SCALE_FACTOR, 2
+
+@echo 11 * SCALE_FACTOR ; Prints &quot;22&quot;
+</code></pre>
+<pre><code>Global1: 
+    @defn .LOCAL_CONSTANT, 2
+    
+Global2: 
+    @defn .LOCAL_CONSTANT, 4
+
+@echo Global1.LOCAL_CONSTANT ; Prints &quot;2&quot;
+
+@echo Global2.LOCAL_CONSTANT ; Prints &quot;4&quot;
+</code></pre>
+<pre><code>@defn Global.LOCAL_CONSTANT, 9
+    
+Global: 
+    @echo .LOCAL_CONSTANT ; Prints &quot;9&quot;
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="defl"><a class="header" href="#defl"><code>@defl</code></a></h1>
+<p>Use <code>@defl</code> to define labels that reference addresses.</p>
+<p>Prefer using <code>@defl</code> instead of <a href="simple/./defn.html"><code>@defn</code></a> for defining things such
+as addresses in RAM. The assembler will treat <code>@defl</code> values as addresses for
+example when generating debugging information.</p>
+<p><code>@defl</code> takes two arguments: a label, followed by an expression.</p>
+<h2 id="examples-4"><a class="header" href="#examples-4">Examples</a></h2>
+<pre><code>@defl VRAM, $2000
+@defl VRAM.palette, VRAM + $0100
+
+@org $8000
+
+ldx #$10
+lda #$ff
+sta VRAM.palette, x
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="redefn"><a class="header" href="#redefn"><code>@redefn</code></a></h1>
+<p><a href="simple/./defn.html"><code>@defn</code></a> will not let you change the value of a constant once it is
+defined. They are immutable.</p>
+<p>Though there may be some circumstances you may want to do this. You can use
+<code>@redefn</code> to achieve this.</p>
+<h2 id="examples-5"><a class="header" href="#examples-5">Examples</a></h2>
+<pre><code>@defn CONST, 42
+@defn CONST, 32 ; Will result in an ERROR!
+
+@echo &quot;Success!&quot;
+</code></pre>
+<pre><code>@defn CONST, 42
+@redefn CONST, 32
+
+@echo &quot;Success!&quot;
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="redefl"><a class="header" href="#redefl"><code>@redefl</code></a></h1>
+<p><a href="simple/./defl.html"><code>@defl</code></a> will not let you change the value of a label once it is
+defined. They are immutable.</p>
+<p>Though there may be some circumstances you may want to do this. You can use
+<code>@redefl</code> to achieve this.</p>
+<h2 id="examples-6"><a class="header" href="#examples-6">Examples</a></h2>
+<pre><code>@defl ADDR, $4000
+@defl ADDR, $2000 ; Will result in an ERROR!
+
+@echo &quot;Success!&quot;
+</code></pre>
+<pre><code>@defl ADDR, $4000
+@redefl ADDR, $2000
+
+@echo &quot;Success!&quot;
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="undef"><a class="header" href="#undef"><code>@undef</code></a></h1>
+<p>Use <code>@undef</code> to &quot;undefine&quot; a label or constant.</p>
+<h2 id="examples-7"><a class="header" href="#examples-7">Examples</a></h2>
+<pre><code>@defn TEST, 42
+
+@echo TEST ; Prints &quot;42&quot;
+
+@undef TEST
+
+@echo TEST ; Will error due to expression not being solvable
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="assert"><a class="header" href="#assert"><code>@assert</code></a></h1>
+<p>The <code>@assert</code> directive is also invaluable for debugging and validating
+invariants in your code.</p>
+<h2 id="examples-8"><a class="header" href="#examples-8">Examples</a></h2>
+<p>It is invoked with an expression argument and optional string message:</p>
+<pre><code>@assert 2 + 2 == 4
+</code></pre>
+<pre><code>@assert 1, &quot;cannot fail!&quot;
+</code></pre>
+<p>Assertions support lazy evaluation. That means you can write assertions that
+reference labels that are defined later in your code:</p>
+<pre><code>@assert SubRoutine.length == 4
+
+SubRoutine:
+    nop
+    nop
+    nop
+    rts
+    @defn .length, @here - SubRoutine
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="die"><a class="header" href="#die"><code>@die</code></a></h1>
+<p><code>@die</code> is a convenience directive used to terminate
+the assembler with an error message.</p>
+<h2 id="examples-9"><a class="header" href="#examples-9">Examples</a></h2>
+<pre><code>@die &quot;Assembler will not continue...&quot;
+</code></pre>
+<p>The error message will be printed on <code>stderr</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="db"><a class="header" href="#db"><code>@db</code></a></h1>
+<p><code>@db</code> is used to define bytes. It along with its siblings:
+<a href="simple/./dw.html"><code>@dw</code></a> and <a href="simple/./ds.html"><code>@ds</code></a> can have special meaning
+depending on where and when they are used.</p>
+<h2 id="examples-10"><a class="header" href="#examples-10">Examples</a></h2>
+<p>Most commonly, you'll use <code>@db</code> to define strings in the <code>CODE</code>
+<a href="simple/./segment.html">segment</a> of your binary:</p>
+<pre><code>@db &quot;hello&quot;
+</code></pre>
+<p>However you can also define sequences of bytes:</p>
+<pre><code>@db $42, $43, $44, $45
+</code></pre>
+<p>Or mix and match:</p>
+<pre><code>@db &quot;Hello World&quot;, $a, &quot;This is a test&quot;, $42
+</code></pre>
+<p>Within the <code>ADDR</code> <a href="simple/./segment.html">segment</a>, <code>@db</code> simply increments the program
+counter by 1.</p>
+<pre><code>    @segment &quot;ADDR&quot;
+    @org 0
+
+location:
+    @db
+location2:
+    @db
+
+    @assert location2 == 1
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="dw"><a class="header" href="#dw"><code>@dw</code></a></h1>
+<p><code>@dw</code> is used to define 16-bit &quot;words&quot;. It along with its siblings:
+<a href="simple/./dw.html"><code>@db</code></a> and <a href="simple/./ds.html"><code>@ds</code></a> can have special meaning
+depending on where and when they are used.</p>
+<h2 id="examples-11"><a class="header" href="#examples-11">Examples</a></h2>
+<p>Most commonly, you'll use <code>@dw</code> to define words in the <code>CODE</code>
+<a href="simple/./segment.html">segment</a> of your binary:</p>
+<pre><code>@dw $1234
+</code></pre>
+<p>Like with <code>@db</code>, you can define a sequence of words:</p>
+<pre><code>@dw $1234, $5678
+</code></pre>
+<p>Within the <code>ADDR</code> <a href="simple/./segment.html">segment</a>, <code>@dw</code> simply increments the program
+counter by 2.</p>
+<pre><code>    @segment &quot;ADDR&quot;
+    @org 0
+
+location:
+    @dw
+location2:
+    @dw
+
+    @assert location2 == 2
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="ds"><a class="header" href="#ds"><code>@ds</code></a></h1>
+<p><code>@ds</code> is used to define <em>space</em>, or really a contiguous sequence of bytes.
+It along with its siblings: <a href="simple/./db.html"><code>@db</code></a> and <a href="simple/./dw.html"><code>@dw</code></a>
+can have special meaning depending on where and when they are used.</p>
+<h2 id="examples-12"><a class="header" href="#examples-12">Examples</a></h2>
+<p>Most commonly, you'll use <code>@ds</code> to define strings in the <code>CODE</code>
+<a href="simple/./segment.html">segment</a> of your binary:</p>
+<pre><code>@ds 8 ; Will add 8 bytes of $00 to the output.
+</code></pre>
+<p>However you can also define your space to have an initial value:</p>
+<pre><code>@db 16, $ff ; Will add 16 bytes of $ff to the output.
+</code></pre>
+<h2 id="examples-13"><a class="header" href="#examples-13">Examples</a></h2>
+<p>Within the <code>ADDR</code> <a href="simple/./segment.html">segment</a>, <code>@ds</code> simply increments the program
+counter by a fixed amount.</p>
+<pre><code>    @segment &quot;ADDR&quot;
+    @org 0
+
+location:
+    @ds 7
+location2:
+    @ds 1
+
+    @assert location2 == 7
+</code></pre>
+<p>This works similarly in <a href="simple/./struct.html">structs</a> where it can be
+used to insert padding:</p>
+<pre><code>@struct MyStruct
+    @ds 2
+    field 1
+@endstruct
+
+@assert MyStruct.field == 2
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="segment"><a class="header" href="#segment"><code>@segment</code></a></h1>
+<p>When AZ65 is parsing your assembly it is running in one of two segment <em>modes</em>:</p>
+<h2 id="code"><a class="header" href="#code"><code>CODE</code></a></h2>
+<p>By default, AZ65 is running in the <code>CODE</code> segment mode. This means that
+AZ65 is generating normal code.</p>
+<p>For example when assembling z80 code and the assembler encounters:</p>
+<pre><code>@org 0
+
+LoadAWith42:
+    ld a, $42
+</code></pre>
+<p>It will emit the bytes <code>3E 42</code>. And add an entry in the assembler's symbol
+table for the value <code>LoadAWith42</code> set to the value <code>0</code> (the value of the program
+counter).</p>
+<h2 id="addr"><a class="header" href="#addr"><code>ADDR</code></a></h2>
+<p>However, if you switch to the <code>ADDR</code> segment mode the assembler is much
+more restrictive in what it accepts.</p>
+<p>In the following example we add the directive <code>@segment</code> with a value of
+<code>&quot;ADDR&quot;</code> to the top of our code:</p>
+<pre><code>@segment &quot;ADDR&quot;
+
+@org 0
+
+LoadAWith42:
+    ld a, $42
+</code></pre>
+<p>This will result in an <em>ERROR</em> indicating that instructions are not
+allowed in the <code>ADDR</code> segment.</p>
+<p>In this mode, you are free to define labels and constants, but
+cannot generate any code. All directives work as normal besides
+the <code>@db</code>, <code>@dw</code>, and <code>@ds</code> directives. In <code>ADDR</code> mode they only
+increment the program counter.</p>
+<p>The <code>ADDR</code> segment is meant specifically for defining memory addresses
+in RAM. This is useful in systems where your code is stored in ROM,
+usually game consoles like the Nintendo Entertainment System or Game Boy.</p>
+<p>For example, the Game Boy memory map defines RAM as starting at <code>$C000</code>.
+Rather than manually using <code>@defl</code> to manually define memory locations
+for variables, you can let the assembler assign addresses:</p>
+<pre><code>@segment &quot;ADDR&quot;
+
+org $C000
+
+WRAM0:
+    .PlayerX: @db
+    .PlayerY: @db
+    .PlayerHealth: @db
+</code></pre>
+<p>With this, you can easily define, move, and reference variables in RAM bank 0.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="if"><a class="header" href="#if"><code>@if</code></a></h1>
+<p>The <code>@if</code> directive is used to essentually turn blocks of code
+<em>ON</em> or <em>OFF</em>.</p>
+<pre><code>@if 0
+    @die &quot;Ignored!&quot;	
+@endif
+</code></pre>
+<p>An <code>@if</code> directive takes a single expression argument. If that expression
+evaluates to <code>0</code> then all tokens are ignored by the assembler until it finds
+a matching <code>@endif</code> directive. Any value other than <code>0</code> is interpreted as
+being <code>true</code> and will result in the tokens being assembled as normal.</p>
+<h2 id="include-guards"><a class="header" href="#include-guards">Include Guards</a></h2>
+<p>Since AZ65 assembles and links your code in a single pass, you usually
+dont need what are referred to as <em>include guards</em>. But for the sake
+of demonstration, these are <code>@if</code> directives used in assembly languages
+to prevent labels from being defined multiple times.</p>
+<p>An example of an <em>include-guarded</em> assembly file would look like this:</p>
+<pre><code>; filename: &quot;foo.inc&quot;
+
+@if ! @isdef FOO_INC
+@defn FOO_INC, 1
+
+@defl MY_CONSTANT, $42
+
+@endif ; FOO_INC
+</code></pre>
+<p>In this example a constant value <code>FOO_INC</code> is used as a flag indicating
+if the block of code within the <code>@if</code> and <code>@endif</code> directives has been
+read by the assembler already. The <a href="simple/../macro_like/isdef.html"><code>@isdef</code></a>
+directive is used to check whether the <code>FOO_INC</code> flag has been defined,
+if not, then it will be set to <code>1</code> on the next line.</p>
+<p>This allows you to run <code>@include &quot;foo.inc&quot;</code> multiple times in your
+assembly with no worry about errors.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="struct"><a class="header" href="#struct"><code>@struct</code></a></h1>
+<p>The <code>@struct</code> directive is used to simplify working with
+complex data types. <em>&quot;Structs&quot;</em> ultimately allow you to
+define offsets and lengths of data from a base address.</p>
+<p>We'll start with a simple example:</p>
+<pre><code>@struct MyStruct
+    field1 1
+    field2 2
+@endstruct
+</code></pre>
+<p>A <code>@struct</code> directive begins with a global label. In this example
+we create a struct named <code>MyStruct</code>. Then we provided a list of
+label-expression pairs ending with an <code>@endstruct</code> directive.</p>
+<p>This has the same effect as writing:</p>
+<pre><code>@segment &quot;ADDR&quot;
+@org 0
+
+MyStruct:
+
+@meta &quot;@SIZEOF&quot; &quot;1&quot;
+.field1: @ds 0
+@endmeta
+
+@meta &quot;@SIZEOF&quot; &quot;2&quot;
+.field2: @ds 1
+@endmeta
+
+@redefl MyStruct, 1 + 2
+</code></pre>
+<p>We can ignore the <a href="simple/./meta.html"><code>@meta</code></a> and <a href="simple/./meta.html"><code>@endmeta</code></a>
+directives for now and focus on the symbols added to the symbol table.</p>
+<ul>
+<li><code>MyStruct</code> holds the sum of all expressions for each label defined
+in the struct. This is the &quot;size&quot; (or length) of the struct in bytes.</li>
+<li><code>MyStruct.field1</code> holds the <strong>offset</strong> of the label in bytes from
+the start of the struct. The offset of a struct is the sum of all
+expressions that came before it. Sice it is the first label in the
+struct, it has an offset of <code>1</code>.</li>
+<li><code>MyStruct.field2</code> as with the above, this label holds the offset
+of the label from the start of the struct. Since <code>.field1</code> evaluates
+to <code>1</code>, then <code>.field2</code> is set to <code>1</code>.</li>
+</ul>
+<p>Structs provide a few other bits of syntactic sugar. Colons (<code>:</code>) following
+labels within the struct body are optional. Expressions can contain references
+to previously-defined labels in the struct. And you can use <code>@db</code>
+and <code>@dw</code> as synonyms for <code>1</code> and <code>2</code>, respectively:</p>
+<pre><code>@struct MyStruct
+    field1: @dw
+    field2: .field1 + 1
+    field3: @db
+@endstruct
+</code></pre>
+<p>Finally, <a href="simple/./align.html"><code>@align</code></a> can be used in structs to add padding
+between labels just like you would do in normal code:</p>
+<pre><code>@struct MyStruct
+    field1: @db
+
+    @align 8
+    field2: @db 
+@endstruct
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="sizeof"><a class="header" href="#sizeof"><code>@sizeof</code></a></h1>
+<p><code>@sizeof</code> is helper for accessing the expression provided
+for labels defined in a <a href="simple/./struct.html"><code>@struct</code></a>. Normally,
+when you have a struct like this:</p>
+<pre><code>@struct MyStruct
+    field: 2
+@endstruct
+</code></pre>
+<p>You have no way to access the result of the expression after
+<code>field</code>. This size <a href="simple/./meta.html"><em>&quot;metadata&quot;</em></a> is stored in the
+symbol table, but you cannot access it directly. The label
+<code>MyStruct.field</code> afterall is set to <code>0</code>: the offset of the
+label from the start of the struct.</p>
+<p>To access it easily, use <code>@sizeof</code>:</p>
+<pre><code>@defn FIELD_SIZE, @sizeof MyStruct.field
+</code></pre>
+<p><code>@sizeof MyStruct.field</code> in this example will return <code>2</code>.</p>
+<p>This has nearly the same effect as the much more clunky:</p>
+<pre><code>@defn FIELD_SIZE, @parse @string { @getmeta MyStruct.field, &quot;@SIZEOF&quot; &quot;\\&quot; }
+</code></pre>
+<p>Though <code>@sizeof</code> <strong>acts as a unary operator in expressions</strong>. It will be lazily
+evaluated if necessary.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="incbin"><a class="header" href="#incbin">@incbin</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="align"><a class="header" href="#align">@align</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="meta"><a class="header" href="#meta">@meta</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="macros"><a class="header" href="#macros">Macros</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="macro-like-directives"><a class="header" href="#macro-like-directives">Macro-Like Directives</a></h1>
+<p>As explained before, macros in AZ65 act as generators of tokens.
+The following directives are considered &quot;macro-like&quot; since they
+ultimately perform token generation.</p>
+<p>They can be thought of as macros that are built-in to the assembler,
+but unlike normal macros, they will be evaluated while defining new macros.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="getmeta"><a class="header" href="#getmeta">@getmeta</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="include"><a class="header" href="#include">@include</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="isdef"><a class="header" href="#isdef">@isdef</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="string"><a class="header" href="#string">@string</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="label"><a class="header" href="#label">@label</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="count"><a class="header" href="#count">@count</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="each"><a class="header" href="#each"><code>@each</code></a></h1>
+<p>The <code>@each</code> directive will repeat a block of tokens
+for each input token.</p>
+<h2 id="examples-14"><a class="header" href="#examples-14">Examples</a></h2>
+<pre><code>; Will print the numbers on separate lines
+@each Token, { 1 2 3 4 }
+    @echo Token
+@endeach
+</code></pre>
+<p>Each can be combined with <a href="macro_like/./count.html"><code>@count</code></a> to create
+a <code>REPEAT</code> macro:</p>
+<pre><code>@macro REPEAT, 2, N, Body
+    @each _, { @count N }
+        Body
+    @endeach
+@endmacro
+
+; Prints &quot;Hello&quot; 3 times
+REPEAT 3, {
+    @echo &quot;Hello&quot;
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="hex"><a class="header" href="#hex">@hex</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="bin"><a class="header" href="#bin">@bin</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="parse"><a class="header" href="#parse">@parse</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="entropy"><a class="header" href="#entropy"><code>@entropy</code></a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="advanced-macros"><a class="header" href="#advanced-macros">Advanced Macros</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="bank-metadata"><a class="header" href="#bank-metadata">Bank Metadata</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="bank-switching"><a class="header" href="#bank-switching">Bank Switching</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="debug-symbols"><a class="header" href="#debug-symbols">Debug Symbols</a></h1>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+    </body>
+</html>
