@@ -2207,7 +2207,7 @@ where
 
                             match self.seg_mode {
                                 SegmentMode::Addr => {
-                                    if (self.here as usize) + 1 > (u16::MAX as usize) {
+                                    if (self.here as usize) + 1 > (u16::MAX as usize) + 1 {
                                         return asm_err!(
                                             loc,
                                             "\"@db\" bytes extend past address $ffff"
@@ -2224,7 +2224,7 @@ where
                                             let bytes = interner.get(value).unwrap().as_bytes();
 
                                             if (self.here as usize) + bytes.len()
-                                                > (u16::MAX as usize)
+                                                > (u16::MAX as usize) + 1
                                             {
                                                 return asm_err!(
                                                     loc,
@@ -2243,7 +2243,9 @@ where
                                                 if (value as u32) > (u8::MAX as u32) {
                                                     return asm_err!(loc, "\"@db\" expression result ({value}) will not fit in a byte");
                                                 }
-                                                if (self.here as usize) + 1 > (u16::MAX as usize) {
+                                                if (self.here as usize) + 1
+                                                    > (u16::MAX as usize) + 1
+                                                {
                                                     return asm_err!(
                                                         loc,
                                                         "\"@db\" bytes extend past address $ffff"
@@ -2277,7 +2279,7 @@ where
 
                             match self.seg_mode {
                                 SegmentMode::Addr => {
-                                    if (self.here as usize) + 2 > (u16::MAX as usize) {
+                                    if (self.here as usize) + 2 > (u16::MAX as usize) + 1 {
                                         return asm_err!(
                                             loc,
                                             "\"@dw\" bytes extend past address $ffff"
@@ -2298,7 +2300,7 @@ where
                                                 "\"@dw\" expression result ({value}) will not fit in a word"
                                             );
                                         }
-                                        if (self.here as usize) + 2 > (u16::MAX as usize) {
+                                        if (self.here as usize) + 2 > (u16::MAX as usize) + 1 {
                                             return asm_err!(
                                                 loc,
                                                 "\"@dw\" bytes extend past address $ffff"
@@ -2339,7 +2341,8 @@ where
                                             "\"@ds\" size expression result ({size}) will not fit in a word"
                                         );
                                     }
-                                    if (self.here as usize) + (size as usize) > (u16::MAX as usize)
+                                    if (self.here as usize) + (size as usize)
+                                        > (u16::MAX as usize) + 1
                                     {
                                         return asm_err!(
                                             loc,
@@ -2512,7 +2515,9 @@ where
                                     for result in reader.bytes() {
                                         match result {
                                             Ok(b) => {
-                                                if (self.here as usize) + 1 > (u16::MAX as usize) {
+                                                if (self.here as usize) + 1
+                                                    > (u16::MAX as usize) + 1
+                                                {
                                                     return asm_err!(
                                                         loc,
                                                         "\"@incbin\" bytes extend past address $ffff"
@@ -2874,7 +2879,7 @@ where
                                             );
                                         }
                                         if (self.here as usize) + (padding as usize)
-                                            > (u16::MAX as usize)
+                                            > (u16::MAX as usize) + 1
                                         {
                                             return asm_err!(
                                                 loc,

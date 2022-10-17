@@ -434,6 +434,40 @@ fn structs2() {
 }
 
 #[test]
+fn db_dw_ds_incbin_align_no_overflow() {
+    let assembler = assembler(&[
+        ("/byte.bin", "0"),
+        (
+            "/test.asm",
+            r#"
+            @org $FFFF
+            @db 0
+
+            @org $FFFE
+            @dw 0
+
+            @org $FFFF
+            @ds 1
+
+            @org $FFFF
+            @incbin "byte.bin"
+
+            @org 0
+            @align $FFFF
+            @db 0
+        "#,
+        ),
+    ]);
+
+    let mut data = Vec::new();
+    assembler
+        .assemble("/", "test.asm")
+        .unwrap()
+        .link(&mut data)
+        .unwrap();
+}
+
+#[test]
 fn align() {
     let assembler = assembler(&[(
         "/test.asm",
