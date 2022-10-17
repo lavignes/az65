@@ -662,7 +662,7 @@ where
                     "\tIncluded from {}:{}:{}",
                     path.display(),
                     loc.line,
-                    loc.column
+                    if loc.column == 0 { 1 } else { loc.column }
                 )
                 .unwrap();
                 included_from = token_source.included_from();
@@ -673,7 +673,7 @@ where
             "\n{}:{}:{}:",
             path.file_name().unwrap().to_str().unwrap(),
             loc.line,
-            loc.column
+            if loc.column == 0 { 1 } else { loc.column }
         )
         .unwrap();
         writeln!(fmt_msg, "{e}").unwrap();

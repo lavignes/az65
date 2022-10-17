@@ -114,7 +114,7 @@ impl<S: FileSystem> Module<S> {
                         path.display(),
                         path.file_name().unwrap().to_str().unwrap(),
                         loc.line,
-                        loc.column
+                        if loc.column == 0 { 1 } else { loc.column }
                     )));
                 }
                 Some(Symbol::Expr(expr)) => {
@@ -124,7 +124,7 @@ impl<S: FileSystem> Module<S> {
                             path.display(),
                             path.file_name().unwrap().to_str().unwrap(),
                             loc.line,
-                            loc.column
+                            if loc.column == 0 { 1 } else { loc.column }
                         )));
                     }
                 }
@@ -145,7 +145,7 @@ impl<S: FileSystem> Module<S> {
                                 path.display(),
                                 path.file_name().unwrap().to_str().unwrap(),
                                 loc.line,
-                                loc.column
+                                if loc.column == 0 { 1 } else { loc.column }
                             )));
                         }
                         self.data[*offset] = value as u8;
@@ -156,7 +156,7 @@ impl<S: FileSystem> Module<S> {
                             path.display(),
                             path.file_name().unwrap().to_str().unwrap(),
                             loc.line,
-                            loc.column
+                            if loc.column == 0 { 1 } else { loc.column }
                         )));
                     }
                 }
@@ -171,7 +171,7 @@ impl<S: FileSystem> Module<S> {
                                 path.display(),
                                 path.file_name().unwrap().to_str().unwrap(),
                                 loc.line,
-                                loc.column
+                                if loc.column == 0 { 1 } else { loc.column }
                             )));
                         }
                         self.data[*offset] = value as u8;
@@ -182,7 +182,7 @@ impl<S: FileSystem> Module<S> {
                             path.display(),
                             path.file_name().unwrap().to_str().unwrap(),
                             loc.line,
-                            loc.column
+                            if loc.column == 0 { 1 } else { loc.column }
                         )));
                     }
                 }
@@ -197,7 +197,7 @@ impl<S: FileSystem> Module<S> {
                                 path.display(),
                                 path.file_name().unwrap().to_str().unwrap(),
                                 loc.line,
-                                loc.column
+                                if loc.column == 0 { 1 } else { loc.column }
                             )));
                         }
                         let bytes = (value as u16).to_le_bytes();
@@ -210,7 +210,7 @@ impl<S: FileSystem> Module<S> {
                             path.display(),
                             path.file_name().unwrap().to_str().unwrap(),
                             loc.line,
-                            loc.column
+                            if loc.column == 0 { 1 } else { loc.column }
                         )));
                     }
                 }
@@ -229,7 +229,7 @@ impl<S: FileSystem> Module<S> {
                                 path.display(),
                                 path.file_name().unwrap().to_str().unwrap(),
                                 loc.line,
-                                loc.column
+                                if loc.column == 0 { 1 } else { loc.column }
                             )));
                         }
                         for i in *offset..*offset + *len {
@@ -242,7 +242,7 @@ impl<S: FileSystem> Module<S> {
                             path.display(),
                             path.file_name().unwrap().to_str().unwrap(),
                             loc.line,
-                            loc.column
+                            if loc.column == 0 { 1 } else { loc.column }
                         )));
                     }
                 }
@@ -258,7 +258,7 @@ impl<S: FileSystem> Module<S> {
                                     path.display(),
                                     path.file_name().unwrap().to_str().unwrap(),
                                     loc.line,
-                                    loc.column
+                                    if loc.column == 0 { 1 } else { loc.column }
                                 )));
                             }
                             return Err(LinkerError(format!(
@@ -266,7 +266,7 @@ impl<S: FileSystem> Module<S> {
                                 path.display(),
                                 path.file_name().unwrap().to_str().unwrap(),
                                 loc.line,
-                                loc.column
+                                if loc.column == 0 { 1 } else { loc.column }
                             )));
                         }
                     } else {
@@ -276,7 +276,7 @@ impl<S: FileSystem> Module<S> {
                             path.display(),
                             path.file_name().unwrap().to_str().unwrap(),
                             loc.line,
-                            loc.column
+                            if loc.column == 0 { 1 } else { loc.column }
                         )));
                     }
                 }

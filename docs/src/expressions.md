@@ -34,7 +34,15 @@ language with a few notable modifications:
    are used to get the low and high byte of a 16-bit word. For example:
    * `< $1234` evaluates to `$34`.
    * `> $1234` evaluates to `$12`.
-3. Unsigned (logical) shift operators are provided. Use the `<<<` and `>>>`
+3. There is a unary `+` operator. This is mainly used to disambiguate between
+   expressions and memory locations in some assembly languages. For example,
+   in z80 assembly the instruction `ld a, ($42)` is ambiguous. A programmer
+   may intend for this to load the value `$42` into `a`, but AZ65 will interpret
+   this is loading a byte at address `$0042` into `a`. To add clarity, you can
+   use a unary `+` to indicate that you are passing a numeric expression rather
+   than an address:
+   * `ld a, +($42)`
+4. Unsigned (logical) shift operators are provided. Use the `<<<` and `>>>`
    symbols to shift left and right respectively:
    * `$ffffffff >>> 1` evaluates to `$7fffffff`
    * `$ffffffff <<< 1` evaluates to `$fffffffe`

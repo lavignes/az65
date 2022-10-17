@@ -27,3 +27,18 @@ To encode a byte directly, place a backslash before a hexadecimal number:
 ```
 "capital Q: \$51"
 ```
+
+## Multicharacter Literals
+
+AZ65 also supports the multicharacter literal that is present in C.
+
+You can specify big-endian 32-bit values as a sequence of 1 to 4 ASCII
+characters enclosed in single quotes (`'`):
+
+```
+'a'
+'yo'
+'test'
+```
+
+
